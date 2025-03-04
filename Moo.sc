@@ -1,41 +1,106 @@
 Moo {
-	var index, objects, <netAPI, semaphore, <pronouns;
+	var index, objects, users, <api, <semaphore, <pronouns, <host, lobby, <me;
 
 	*new{|netAPI, json|
-		^super.new.init(netAPI)
+		^super.new.load(netAPI)
 	}
 
-	init {|net, json|
-		netAPI = net ? NetAPI.default;
+	*login{|netAPI|
+		^super.new.init_remote(netAPI)
+	}
+
+	init {|net|
+
+		api = net ? NetAPI.default;
+
+		api.isNil.if({
+				Error("You must open a NetAPI first").throw;
+			});
 
 		semaphore = Semaphore(1);
-		//pronouns = IdentityDictionary[ \masc -> IdentityDictionary[
-		//	\sub -> "He", \ob-> "Him", \pa-> "His", \po -> "His", \ref -> "Himself" ];
-		//];
+		pronouns = IdentityDictionary[ \masc -> IdentityDictionary[
+			\sub -> "He", \ob-> "Him", \pa-> "His", \po -> "His", \ref -> "Himself" ];
+		];
+
+		host = false;
+	}
+
+
+	load {|net, json|
+
+		var root, user_update_action;
+
+		this.init(net);
 
 		objects = [];
 		index = 0;
-		/*
+		users = IdentityDictionary();
+
+		host = true;
+
 		json.isNil.if({
-			//MooObject(this, "dummy");
-			//MooPlayer(this, "Root");
-			//objects = [MooRoom(this, "Lobby", objects[0])];
-			//index = 2;
+			{
+				//MooObject(this, "dummy");
+				root = MooRoot(this, "Root");
+				lobby = MooRoom(this, "Lobby", root);
+				lobby.arrive(root);
+
+
+				//objects = [MooRoom(this, "Lobby", objects[0])];
+				//index = 2;
+			}.fork;
 		}, {
 			// There needs to be a way to load this from JSON objects
 		});
-		*/
+
+		//listen for new users
+		user_update_action {|buser|
+			var name, muser;
+
+			name = buser.nick.asSymbol;
+			muser = users.at(name);
+			muser.isNil.if({
+				muser = MooPlayer(this, name);
+			});
+			lobby.arrive(muser);
+
+		};
+		api.add_user_update_listener(this, user_update_action );
+
 	}
+
+	init_remote{|net|
+		var root;
+
+		this.init(net);
+
+	}
+
 
 	add { |obj|
 
-		var obj_index;
+		var obj_index, name, should_add= true;
 
 		semaphore.wait;
 
-		objects = objects.add(obj);
-		obj_index = objects.size;
-		index = index + 1;
+		obj.isKindOf(MooPlayer).if({
+			name = obj.name.asSymbol;
+			users.includes(name).not({
+				users.add(name);
+			} , {
+				// this user already exists
+				obj_index = users.at(name).id;
+				should_add = false;
+				MooDuplicateError("MooPlayer % exists as %".format(name, obj_index)).throw;
+			});
+		});
+
+		should_add.if({
+
+			obj_index = objects.size;
+			objects = objects.add(obj);
+			index = index + 1;
+		});
 
 		semaphore.signal;
 
@@ -65,11 +130,31 @@ Moo {
 
 }
 
+
+
+
 MooError : Error {}
+MooVerbError : MooError {}
+MooCompileError : MooVerbError {}
+MooDuplicateError : MooError{}
 
-MooObject : NetworkGui {
+MooReservedWordError : MooVerbError {
+	var <>badStrings;
+	 *new {|msg, strings|
+		^super.new.init(msg, strings);
+	}
+	init{|msg, strings|
+		super.init(msg);
+		badStrings = strings;
+	}
+}
 
-	var <moo,  <>name, <owner, <id, <aliases, <>desc, verbs, <location,  <properties, <>immobel;
+
+
+MooObject  {
+
+	var <moo,  <owner, <id, <aliases, verbs, <location,  <properties, <>immobel,
+	playableEnv;
 
 
 	*new { |moo, name, maker|
@@ -79,34 +164,66 @@ MooObject : NetworkGui {
 
 	init {|imoo, iname, maker|
 
+		var name;
+
 		moo = imoo;
 		owner = maker;
 
-		super.make_init(moo.netAPI, nil, {});
+		//super.make_init(moo.api, nil, {});
+		playableEnv = NetworkGui.make(moo.api, nil, {});
+		playableEnv.know = true;
+
 
 		id = moo.add(this);
 		name = iname ? id.asString;
-		desc = "";
 		aliases = [];
 		verbs = IdentityDictionary();
 		properties = IdentityDictionary();
 		immobel = false;
+
+		this.property_(\description, "You see nothing special.", true);
+		this.property_(\name, name, true);
+
+
+		this.verb_(\look, \this, \none,
+			"""
+			{|dobj, iobj, caller|
+dobj.description.postln;
+                caller.post(dobj.description.value);
+			}
+            """
+		);
+
+		this.verb_(\describe, \this, \any,
+			"""
+			{|dobj, iobj, caller|
+
+				(caller == dobj.owner).if({
+					dobj.description.value = iobj.asString;
+				});
+			}
+            """
+		);
+
+		this.verb_(\drop, \this, \none,
+			"""
+			{|dobj, iobj, caller|
+
+				caller.contents.remove(this);
+				caller.location.announce(\"% dropped %\".format(caller, dobj));
+				caller.location.contents = caller.location.contents.add(this);
+			}
+         """
+		);
 	}
 
 
-	decribe {| str|
-
-		desc = str;
-	}
 
 	alias {|new_alias|
 
 		aliases = aliases.add(new_alias);
 	}
 
-	look {
-		^desc
-	}
 
 	property_ {|key, ival, publish = true|
 
@@ -114,14 +231,14 @@ MooObject : NetworkGui {
 
 		key = key.asSymbol;
 
-		((properties.includesKey(key)) || verbs.inclidesKey(key)).if({
-			MooError("% name already in use by %".format(key, name)).throw;
+		((properties.includesKey(key)) || verbs.includesKey(key)).if({
+			MooError("% name already in use by %".format(key, this.name)).throw;
 		}, {
 
 			shared = SharedResource(ival);
 			properties.put(key, shared);
 			publish.if({
-				this.addShared("%/%".format(key, id).asSymbol, shared);
+				playableEnv.addShared("%/%".format(key, id).asSymbol, shared);
 			});
 		});
 
@@ -134,8 +251,8 @@ MooObject : NetworkGui {
 
 		key = key.asSymbol;
 
-		((properties.includesKey(key)) || verbs.inclidesKey(key)).if({
-			MooError("% name already in use by %".format(key, name)).throw;
+		((properties.includesKey(key)) || verbs.includesKey(key)).if({
+			MooError("% name already in use by %".format(key, this.name)).throw;
 		}, {
 			newV = MooVerb(key, dobj, iobj, func, this, publish);
 
@@ -149,77 +266,100 @@ MooObject : NetworkGui {
 	}
 
 	isPlayer{ ^false }
-}
 
 
-MooPlayer : MooObject {
+	doesNotUnderstand { arg selector ... args;
+		var verb, property, func;
 
-	var contents, ownedObjects;
+		// first try moo stuff
 
-	*new { |moo, name|
-		var player = super.new(moo, name);
-		^player.init(moo, name);
-	}
+		verb = verbs[selector];
+		if (verb.notNil) {
+			//^func.functionPerformList(\value, this, args);
+			^verb.invoke(args[0], args[1], args[2]);
+		};
 
-	init {|imoo, iname|
+		if (selector.isSetter) {
+			selector = selector.asGetter;
+			if(this.respondsTo(selector)) {
+				warn(selector.asCompileString
+					+ "exists as a method name, so you can't use it as a pseudo-method.")
+			};
+			^properties[selector].value = args[0];
+		};
 
-		var pronouns;
+		property = properties[selector];
+		property.notNil.if({
+			^property.value
+		});
 
-		super.init(imoo, iname, this);
+		^nil;
 
-		//owner = this;
-		immobel = true;
-		contents = [];
-		ownedObjects = [];
-		//pronouns = moo.pronouns.keys.choose;
-		//pronouns = this.property_(\pronouns, moo.pronouns.keys.choose, false);
-
-		/*this.verb_(\set_pronoun, \this, \any,  {|dobj, iobj, caller|
-
-			iobj = iobj.asSymbol;
-
-			(caller == this).if({ // no force femming
-				moo.pronouns.includesKey(iobj).if({
-					pronouns.value = pronouns;
-				}, {
-					MooError("Pronouns % not yet specified".format(iobj)).throw;
-				});
-			}); //uses a property so doesn't need to be published
-		});*/
 	}
 
 
-	isPlayer{ ^true }
+	move {|newLocation|
 
+		var oldLocation, moved = false;
 
-}
+		immobel.not.if({
+			this.isPlayer.not.if({
+				oldLocation.remove(this);
+				newLocation.addObject(this);
 
+			} , {
+				//name = this.property(\name);
+				//oldLocation.player.remove(this);
+				oldLocation.depart(this, oldLocation, this);
+				newLocation.arrive(this, newLocation, this);
+			});
 
-MooVerb{
-
-	var <verb, <dobj, <iobj, <func, <obj;
-
-	*new {|verb, dobj, iobj, func, obj, publish|
-
-		^super.newCopyArgs(verb, dobj, iobj, func, obj).init(publish);
-	}
-
-	init{ arg publish = false;
-
-		publish.if({
-			this.publish;
+			this.location = newLocation;
 		})
 	}
 
-	publish {
-		// add to the api
-		obj.moo.netAPI.add("%/%".format(verb, obj.id).asSymbol, {arg dob, iob; func(dob, iob)},
-			"% % % % on %".format(verb, dobj, iobj, obj.name));
+
+	match{|key|
+
+		var matches = false;
+
+		matches = (key == this.name);
+
+		matches.not.if({
+
+			matches = aliases.includes(key)
+		});
+
+		^matches;
 	}
+
 }
 
 
 
+
+
+/*
+MooMusicalObject : MooObject {
+
+	var playableEnv;
+
+	*new { |moo, name, maker|
+
+		^super.new.init(moo, name, maker);
+	}
+
+	init {| moo, name, maker|
+
+		super.init(moo, name, maker);
+
+		playableEnv = NetworkGui.make(moo.api, nil, {});
+		playableEnv.know = true;
+
+	}
+
+}
+*/
 
 
 MooClock : MooObject {
@@ -258,23 +398,39 @@ MooClock : MooObject {
 			^changed;
 		}).spec(\tempo, 1);
 
-		this.verb_(\set, \this, \any,  {|dobj, iobj, caller|
+		this.verb_(\set, \this, \any,
+			"""
+			{|dobj, iobj, caller|
 
-			sharedTempo.value = iobj.asFloat;
-		}); //uses a property so doesn't need to be published
+              sharedTempo.value = iobj.asFloat;
+		    }
+            """
+		); //uses a property so doesn't need to be published
 
-		this.verb_(\play, \this, \any, {|dobj, iobj, caller|
+		this.verb_(\play, \this, \any,
+			"""
+			{|dobj, iobj, caller|
 
-			clock.play
-		}, true);
+				clock.play
+			}
+            """
+			, true);
 
-		this.verb_(\stop, \this, \any, {|dobj, iob, caller|
+		this.verb_(\stop, \this, \any,
+			"""
+			{|dobj, iob, caller|
 
-			clock.stop
-		}, true);
+				clock.stop
+			}
+            """
+			, true);
 
-		desc = "The clock attached to %".format(stage.name);
-
+		//desc = "The clock attached to %".format(stage.name);
+		stage.notNil.if({
+			this.description = "The clock attached to %".format(stage.name);
+		} , {
+			this.description = "A clock";
+		});
 
 	}
 
@@ -300,32 +456,30 @@ MooStage : MooObject {
 
 		clock = MooClock(moo, "%_clock".format(name), maker);
 
-		verb_(\add, \any, \this,  {|dobj, iobj, caller|
+		verb_(\add, \any, \this,
 
-			(caller == owner).if({
-				dobj.isKindOf(MooPlayer).if({
-					players.includes(dobj).not ({
-						players = players.add(dobj);
+			"""
+			{|dobj, iobj, caller|
+
+				(caller == owner).if({
+					dobj.isKindOf(MooPlayer).if({
+						players.includes(dobj).not ({
+							players = players.add(dobj);
+						})
 					})
 				})
-			})
-		});
-
-
-
+			}
+            """
+		);
 
 	}
-
-
-
-
 }
 
 
 
 MooRoom : MooObject {
 
-	var contents, players;
+	var contents, players, exits, semaphore;
 
 		*new { |moo, name, maker|
 
@@ -335,176 +489,178 @@ MooRoom : MooObject {
 	init {| moo, name, maker|
 
 		super.init(moo, name, maker);
+		semaphore = Semaphore(1);
 		players = [];
 		contents = [];
-	}
+		aliases = ["here"];
+		exits = IdentityDictionary();
 
-}
+		this.verb_(\announce, \any, \this,
+			// announce "blah" to here
+			"""
+			{|dobj, iobj, caller|
 
+				iobj.announce(dobj);
+			}
+            """
+		);
 
+		this.verb(\arrive, \any, \this,
+			"""
+			{|dobj, iobj, caller|
+				caller.isPlayer.if({
 
-MooParser {
-
-	var actor, input, verb, dobj, preposition, iobj;
-
-	init{| speaker, string|
-
-		var tokenised;
-
-		actor = speaker;
-		input = string;
-
-		this.parse();
-
-		this.call();
-	}
-
-	call {
-
-		var d_obj, i_obj, vfunc;
-
-		d_obj = this.findObj(dobj);
-		iobj.notNil.if({ i_obj = this.findObj(i_obj) });
-
-		vfunc = checkObj(d_obj);
-		vfunc.isNil.if({
-			i_obj.notNil.if({
-				vfunc = checkObj(i_obj);
-			})
-		});
-
-		vfunc.notNil.if({ // call it!!!
-
-			vfunc.func.value(d_obj, i_obj, actor);
-
-		});
-	}
-
-
-
-	identifyStrings {
-
-		var arr=[], word="", inString=false, seperator=$\".ascii;
-
-		input.do({ arg let, i;
-			(let.acii  == seperator).if({
-				inString.if({
-					word = word ++"\"";
-					(word.size > 0).if({
-						arr = arr.add(word);
-						word = "";
-					});
-				} , {
-					(word.size > 0).if({
-						arr = arr.add(word);
-						word = "\"";
-					});
+					iobj.announce(\"With a dramatic flourish, % enters\".format(caller.name));
+					//players = players.add(caller);
+                    iobj.addPlayer(caller);
+					caller.location = this
 				});
+			}
+            """
+		);
 
-				inString = inString.not;
+		this.verb(\depart, \any, \this,
+			"""
+			{|dobj, iobj, caller|
+				caller.isPlayer.if({
 
-			} , {
-				word=word++let;
+					//players.remove(caller);
+                    iobj.removePlayer(caller);
+					iobj.announce(\"With a dramatic flounce, % departs\".format(caller.name));
+
+				});
+			}
+            """
+		);
+	}
+
+	announce {|str|
+
+		var tell;
+
+		players.do({|player|
+			player.post(str);
+		});
+
+		contents.do ({|thing|
+			thing.verbs.includesKey(\tell).if({
+				tell = thing.verbs.at(\tell);
+				tell.invoke(thing, str);
 			});
 		});
-		(word.size > 0).if({
-			arr = arr.add(word);
+	}
+
+	announceExcluding{|excluded, str|
+		var tell;
+
+		players.do({|player|
+			(player != excluded).if({
+				player.post(str);
+			});
 		});
 
-		^arr;
-	}
-
-	parse {
-
-		var deStringed, tokens;
-
-		deStringed = this.identifyStrings().collect({|str| str.stripWhiteSpace });
-
-		tokens = deStringed.collect({|str|
-			(str.beginsWith("\"") || str.endsWith("\"")).not.if({
-				str.split($ );
-			}, {
-				str;
-			})
-		}).flat;
-
-		verb = tokens[0];
-		dobj = tokens[1];
-
-		(tokens.size > 2).if ({ iobj = tokens.last; });
+		contents.do ({|thing|
+			thing.verbs.includesKey(\tell).if({
+				tell = thing.verbs.at(\tell);
+				tell.invoke(thing, str);
+			});
+		});
 
 
 	}
 
 
+	remove {|item|
 
-	checkObj { |obj |
+		semaphore.wait;
+		contents.remove(item);
+		playableEnv.remove(item);
+		semaphore.signal
 
-		var storedVerb;
-
-		storedVerb = obj.getVerb(verb);
-
-		^storedVerb;
 	}
 
-	matchObj {| key, item|
+	addObject {|item|
 
-		var found = false;
+		semaphore.wait;
+		contents = contents.add(item);
+		playableEnv.put(item.name.asSymbol, item);
+		semaphore.signal
 
-		(item.name.asSymbol == key).if ({
+	}
 
-			found = true;  //found!
+	removePlayer {|player|
+		semaphore.wait;
+		players.remove(player);
+		playableEnv.remove(player);
+		semaphore.signal
+	}
 
-		}, {
+	addPlayer{|player|
+		semaphore.wait;
+		players = players.add(players);
+		playableEnv.put(players.name.asSymbol, players);
+		semaphore.signal
+	}
 
-			item.aliases.do({|alias|
+	exit{|key|
+		^exits[\key]
+	}
 
-				(alias.asSymbol == key).if ({
+	addExit{|key, room|
 
-					found = true;
-				});
+		exits.put(key, room);
+	}
+
+	findObj {|key|
+
+		var found, search;
+		key = key.asSymbol;
+
+		search = {|arr|
+
+			arr.do({|obj|
+
+
+				obj.matches(key).if({
+
+					found = obj;
+				})
+			});
+
+			found;
+		};
+
+		found = search.(contents);
+		found.isNil.if({
+			found = search.(players);
+		});
+
+		^found;
+	}
+
+	env {
+
+		^playableEnv
+	}
+
+
+	doesNotUnderstand { arg selector ... args;
+		var found;
+
+		found = super.doesNotUnderstand(selector, *args);
+
+		found.isNil.if({
+			found = this.findObj(selector);
+			found.isNil.if({
+				found = playableEnv[selector];
 			});
 		});
 
 		^found;
 	}
 
-
-	findObj { |key|
-
-		var obj, found = false;
-
-		key = key.asSymbol;
-
-		actor.contents.do({|item|
-
-			found = matchObj(key, item);
-			obj = item;
-		});
-
-		found.not.if ({
-			actor.location.players.do({|item|
-
-			found = matchObj(key, item);
-			obj = item;
-		});
-		});
-		found.not.if ({actor.location.contents.do({|item|
-
-			found = matchObj(key, item);
-			obj = item;
-		});
-		});
-
-		found.not.if.({ obj = key });
-
-		^obj
+	remoteDesc { arg user;
 
 
 	}
-
-
-
-
-
 }

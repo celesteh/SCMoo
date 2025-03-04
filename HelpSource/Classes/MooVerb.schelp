@@ -1,0 +1,53 @@
+TITLE:: MooVerb
+summary:: Functions for MooObjects
+categories:: Libraries/BiLETools/Moo
+related:: Classes/MooObject, Classes/Moo, Classes/SharedResource
+
+DESCRIPTION::
+Objects in the moo have user-accessible functions. These are invoked via text, eg "throw spear at Les".
+These functions are stored as text, allowing users to look at them before running them. The
+text is a SharedResource.new
+
+In the example, "throw spear at Les", the verb is throw, the direct object (dobj) is spear,
+"at" is a preposition,  and the indirect object is Les.  The parser will determine which MooObjects
+these refer to and call the verb's function with the arguments: dobj, iobj, caller. The caller is the
+MooPlayer who invoked the function.
+
+
+
+CLASSMETHODS::
+
+METHOD:: new
+This function should not be invoked directly, but instead use the verb_ message on MooObjects
+
+ARGUMENT:: verb
+A symbol corresponding to the verb's name
+
+ARGUMENT:: dobj
+A symbol, \this if the dobj is the object to which the verb is attached or \any if not
+
+ARGUMENT:: iobj
+A symbol, \this if the iobj is the object to which the verb is attached or \any if any object or text may be used or \none if there is no indirect object
+
+ARGUMENT:: func
+A string containing a function, eg
+"{|dobj, iobj, caller| caller.location.announce(iobj + \"was struck by a\" + dobj);}"
+
+ARGUMENT:: obj
+The MooObject to which this verb is attached
+
+ARGUMENT:: publish
+A boolean. If True, the verb can be invoked via OSC message. This is useful if the verb includes audio.
+
+
+
+INSTANCEMETHODS::
+
+
+
+
+EXAMPLES::
+
+code::
+(some example code)
+::
