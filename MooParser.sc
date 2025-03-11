@@ -3,6 +3,10 @@ MooParser {
 
 	var actor, input, verb, dobj, preposition, iobj;
 
+	*new {|player, string|
+		^super.new.init(player, string);
+	}
+
 	init{| speaker, string|
 
 		var tokenised;
@@ -11,6 +15,10 @@ MooParser {
 		input = string;
 
 		this.parse();
+
+		"parsed".postln;
+
+		"location % ".format(speaker.location).debug("MooParser init");
 
 		this.movement().not.if({
 			this.creation().not.if({
@@ -23,12 +31,16 @@ MooParser {
 
 		var place, matched = false;
 
+		"movement".postln;
+
 		dobj.isNil.if({
-			place = actor.location.exit(verb);
-			place.notNil.if({
-				{ actor.move(place); }.fork;
-				matched = true
-		});
+			actor.location.notNil.if({
+				place = actor.location.exit(verb);
+				place.notNil.if({
+					{ actor.move(place); }.fork;
+					matched = true
+				});
+			});
 		});
 		^matched;
 	}
@@ -36,6 +48,8 @@ MooParser {
 	creation {
 
 		var thing, matched = false, index;
+
+		"creation".postln;
 
 		(verb.asString.toLower.asSymbol == \make).if({
 			matched = true;
@@ -92,6 +106,8 @@ MooParser {
 
 		var d_obj, i_obj, vfunc, found;
 
+		"verb: %".format(verb).postln;
+
 		// try to match the dobj to an object
 		dobj.notNil.if({
 			d_obj = this.findObj(dobj);
@@ -121,7 +137,8 @@ MooParser {
 
 		vfunc.notNil.if({ // call it!!!
 
-			vfunc.func.value(d_obj, i_obj, actor);
+			//vfunc.func.value(d_obj, i_obj, actor);
+			vfunc.invoke(d_obj, i_obj, actor);
 
 		});
 	}
@@ -130,10 +147,12 @@ MooParser {
 
 	identifyStrings {
 
+		// this is meant to find strings which are deliniated with doble qoutes: \"
+
 		var arr=[], word="", inString=false, seperator=$\".ascii;
 
 		input.do({ arg let, i;
-			(let.acii  == seperator).if({
+			(let.ascii  == seperator).if({
 				inString.if({
 					word = word ++"\"";
 					(word.size > 0).if({
@@ -157,8 +176,28 @@ MooParser {
 			arr = arr.add(word);
 		});
 
+		arr.postln;
+
 		^arr;
 	}
+
+	pr_arrFlat{|arr, count|
+
+		var assembled = [];
+
+		[arr, count].postln;
+
+		arr.do({|item|
+			item.isKindOf(String).not.if({
+				assembled = assembled ++ this.pr_arrFlat(item, count +1);
+			}, {
+				assembled = assembled.add(item);
+			});
+		});
+
+		^assembled;
+	}
+
 
 	parse {
 
@@ -172,14 +211,20 @@ MooParser {
 			}, {
 				str;
 			})
-		}).flat;
+		});
+
+		tokens = this.pr_arrFlat(tokens, 0);
+
+		"flattened".postln;
+
+		tokens.postln;
 
 		verb = tokens[0];
 		(tokens.size > 1).if({ dobj = tokens[1]; });
 
 		(tokens.size > 2).if ({ iobj = tokens.last; });
 
-
+		tokens.postln;
 	}
 
 
@@ -365,11 +410,13 @@ MooVerb{
 
 		str = func.value;
 
+		"-----------------------------------------------\ninvoke\ncaller is %".format(caller.name).postln;
 
 		this.pass(str).not.if({
 			MooReservedWordError("Verb contains disallowed commands", this.check(str)).throw;
 		});
-		//str.postln;
+		str.postln;
+		"invoke".postln;
 		f = str.compile.value; // "{|a| a.post}".compile.value returns a function
 
 		f.value(dobj, iobj, caller);

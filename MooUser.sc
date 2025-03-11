@@ -137,9 +137,9 @@ MooPermission {
 
 MooRootPermission : MooPermission {
 
-	*new { ^super.new.init }
+	*new { ^super.new.initRoot }
 
-	init {
+	initRoot {
 
 		level = MooPermission.at(\root);
 	}
@@ -152,15 +152,22 @@ MooPermissionsError : MooError {}
 
 MooRoot : MooPlayer {
 
-	*new { |moo, name, user, self=false|
-		//var player = super.new;//(moo, name);
-		//^player.inita(moo, name);
-		^super.new.init(moo,name, user, self);
+	*new { |moo, name|
+		"MooRoot.new".postln;
+		name.postln;
+		^super.new.initRoot(moo, name);
 	}
 
-	init {|moo, name, user, self=false|
+	initRoot {|moo, name|
 
-		super.init(moo, name, user, self);
+		"MooRoot init".postln;
+		name.postln;
+		moo.dump;
+
+		//moo = moo ? Moo.default;
+
+
+		super.initPlayer(moo, name, nil, false);
 		(id < 2).if({
 			permissions = MooRootPermission();
 		}, {
@@ -170,27 +177,37 @@ MooRoot : MooPlayer {
 
 }
 
-MooPlayer : MooObject {
+MooPlayer  : MooObject {
 
 	var contents, ownedObjects, <>user, <me, <permissions;
 
 	*new { |moo, name, user, self=false|
-		//var player = super.new;//(moo, name);
-		//^player.inita(moo, name);
-		^super.new.init(moo,name, user, self);
+		"MooPlayer.new".postln;
+		^super.new.initPlayer(moo,name, user, self);
 	}
 
-	init {|imoo, iname, iuser, self=false|
+	initPlayer {|imoo, iname, iuser, self=false|
 
 		var pronouns;
 
+		"initPlayer".postln;
+
+		(imoo.notNil || iname.notNil || iuser.notNil).if({
+
+		//imoo = imoo ? Moo.default;
+
 		user = iuser;
-		iname = iname ? user.notnil.if({ user.nick });
+		iname = iname ? user.notNil.if({ user.nick });
+
 		me = self;
+		me.if({
+			iname = iname ? imoo.api.nick;
+		});
 
-			permissions =
 
-		super.init(imoo, iname, this);
+		permissions = MooPermission();
+
+		super.initMooObj(imoo, iname, this);
 		owner = this;
 
 
@@ -198,6 +215,7 @@ MooPlayer : MooObject {
 		immobel = true;
 		contents = [];
 		ownedObjects = [];
+			//home = moo.lobby;
 		//pronouns = moo.pronouns.keys.choose;
 		//pronouns = this.property_(\pronouns, moo.pronouns.keys.choose, false);
 
@@ -220,8 +238,22 @@ MooPlayer : MooObject {
             }
 """
             );
-	}
 
+		this.verb_(\say, \this, \any,  """
+		{|dobj, iobj, caller|
+				caller.location.announceExcluding(caller, \"% says, \\\"%\\\"\".format(caller.name, iobj.asString));
+caller.post(\"You say,  \\\"%\\\"\".format(iobj.asString));
+			}
+		"""
+		);
+		this.verb_(\pose, \this, \any, """
+			{|dobj, iobj, caller|
+				caller.location.announce(\"% %\".format(caller.name, iobj.asString));
+			}
+"""
+		);
+		});
+	}
 
 	isPlayer{ ^true }
 
@@ -269,5 +301,9 @@ MooPlayer : MooObject {
 		});
 	}
 
+	login {
+
+
+	}
 
 }
