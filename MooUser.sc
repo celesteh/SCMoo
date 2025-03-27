@@ -5,7 +5,7 @@ MooPermission {
 	var <level;
 
 	*initClass {
-		levels = [\user, \maker, \builder, \wizard, \root];
+		levels = [\user, \musician, \maker, \builder, \wizard, \root];
 	}
 
 	*at{|index|
@@ -143,6 +143,8 @@ MooRootPermission : MooPermission {
 
 		level = MooPermission.at(\root);
 	}
+
+
 }
 
 
@@ -175,6 +177,31 @@ MooRoot : MooPlayer {
 		});
 	}
 
+	me_{|bool|
+		me = bool
+	}
+
+	parent_ {|genericPlayer|
+
+		var superID;
+
+		"parent_".debug(this);
+
+		genericPlayer.notNil.if({
+
+			genericPlayer.isKindOf(MooObject).if({
+				superID = genericPlayer.id;
+				superObj = genericPlayer;
+			}, {
+				superID = genericPlayer;
+				superObj = moo.at(superID);
+			});
+			this.property_(\parent, superID, false);
+		});
+
+		this.pr_copyParentProperties();
+	}
+
 }
 
 MooPlayer  : MooObject {
@@ -194,81 +221,99 @@ MooPlayer  : MooObject {
 
 		(imoo.notNil || iname.notNil || iuser.notNil).if({
 
-		//imoo = imoo ? Moo.default;
+			imoo = imoo ? Moo.default;
 
-		user = iuser;
-		iname = iname ? user.notNil.if({ user.nick });
+			user = iuser;
+			iname = iname ? user.notNil.if({ user.nick });
 
-		me = self;
-		me.if({
-			iname = iname ? imoo.api.nick;
-		});
-
-
-		permissions = MooPermission();
-
-		super.initMooObj(imoo, iname, this);
-		owner = this;
+			me = self;
+			me.if({
+				iname = iname ? imoo.api.nick;
+			});
 
 
-		//owner = this;
-		immobel = true;
-		contents = [];
-		ownedObjects = [];
+			permissions = MooPermission();
+
+			super.initMooObj(imoo, iname, this, imoo.genericPlayer ? imoo.genericObject);
+			owner = this;
+
+
+			//owner = this;
+			immobel = true;
+			contents = [];
+			ownedObjects = [];
 			//home = moo.lobby;
-		//pronouns = moo.pronouns.keys.choose;
-		//pronouns = this.property_(\pronouns, moo.pronouns.keys.choose, false);
+			//pronouns = moo.pronouns.keys.choose;
+			//pronouns = this.property_(\pronouns, moo.pronouns.keys.choose, false);
 
-		/*this.verb_(\set_pronoun, \this, \any,  {|dobj, iobj, caller|
+			/*this.verb_(\set_pronoun, \this, \any,  {|dobj, iobj, caller|
 
 			iobj = iobj.asSymbol;
 
 			(caller == this).if({ // no force femming
-				moo.pronouns.includesKey(iobj).if({
-					pronouns.value = pronouns;
-				}, {
-					MooError("Pronouns % not yet specified".format(iobj)).throw;
-				});
+			moo.pronouns.includesKey(iobj).if({
+			pronouns.value = pronouns;
+			}, {
+			MooError("Pronouns % not yet specified".format(iobj)).throw;
+			});
 			}); //uses a property so doesn't need to be published
-		});*/
+			});*/
 
-		this.verb_(\tell, \this, \any,  """
-		{|dobj, iobj, caller|
-            dobj.post(iobj.asString);
-            }
+			this.verb_(\tell, \this, \any,  """
+{|dobj, iobj, caller, object|
+dobj.post(iobj.asString, caller);
+}
 """
-            );
+			);
 
-		this.verb_(\say, \this, \any,  """
-		{|dobj, iobj, caller|
-				caller.location.announceExcluding(caller, \"% says, \\\"%\\\"\".format(caller.name, iobj.asString));
+			this.verb_(\say, \this, \any,  """
+{|dobj, iobj, caller, object|
+caller.location.announceExcluding(caller, \"% says, \\\"%\\\"\".format(caller.name, iobj.asString));
 caller.post(\"You say,  \\\"%\\\"\".format(iobj.asString));
-			}
-		"""
-		);
-		this.verb_(\pose, \this, \any, """
-			{|dobj, iobj, caller|
-				caller.location.announce(\"% %\".format(caller.name, iobj.asString));
-			}
+}
 """
-		);
+			);
+			this.verb_(\pose, \this, \any, """
+{|dobj, iobj, caller, object|
+caller.location.announce(\"% %\".format(caller.name, iobj.asString));
+}
+"""
+			);
+
+
+
+			imoo.api.add("post/%".format(this.id).asSymbol, { arg id, str;
+
+				(id == this.id).if({
+					this.post(str)
+				});
+			}, "For chatting. Usage: post/id, id, text");
+
+
+
 		});
+
+
+
 	}
 
 	isPlayer{ ^true }
 
-	post {|str|
+	post {|str, caller|
 
 		"in post".postln;
+		// post is always local ARG NO IT's NOT . . . wait, is it? i don't fucking know....
 		me.if({
 			str.postln;
 		}, {
-			// do the api call?
-
+			// do the api call? - only if we've originated the need for it
+			(caller == this).if({
+				moo.api.sendMsg("post/%".format(this.id).asSymbol, this.id, str);
+			});
 		});
 	}
 
-	postln {|str| this.post(str) }
+	postln {|str, caller| this.post(str, caller) }
 
 	remove {|item|
 

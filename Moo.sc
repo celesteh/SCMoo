@@ -1,6 +1,6 @@
 Moo {
 	classvar <>default;
-	var index, objects, users, <api, <semaphore, <pronouns, <host, <>lobby, <me;
+	var index, objects, users, <api, <semaphore, <pronouns, <host, <>lobby, <me, <genericObject, <genericRoom, <genericPlayer;
 
 	*new{|netAPI, json|
 		^super.new.load(netAPI, json)
@@ -20,6 +20,7 @@ Moo {
 		AppClock.sched(0, {
 			doc = TextView.new(Window.new("", Rect(100, 100, 600, 700)).front, Rect(0, 0, 600, 700)).resize_(5);
 
+			moo.me.me = true;
 			moo.gui(doc);
 
 			nil;
@@ -76,8 +77,19 @@ Moo {
 			//hack = this;
 
 			//MooObject(this, "dummy");
+			"make root".debug(this);
 			root = MooRoot(this, "Jason");
-			lobby = MooRoom(this, "Lobby", root);
+			"made root".debug(this);
+			genericObject = MooObject(this, "object", root, -1);
+			"make a generic player".debug(this);
+			genericPlayer = MooPlayer(this, "player", nil);
+			"made generic player, %".format(genericPlayer.name).debug(this);
+			genericPlayer.dump;
+			root.parent = genericPlayer;
+
+			genericRoom = MooRoom(this, "room", root, genericObject);
+			genericRoom.description_("An unremarkable place.");
+			lobby = MooRoom(this, "Lobby", root, genericRoom);
 			lobby.arrive(root,lobby, root);
 
 			me = root;
@@ -242,10 +254,10 @@ MooReservedWordError : MooVerbError {
 
 
 
-MooObject  {
+MooObject : NetworkGui  {
 
 	var <moo,  <owner, <id, <aliases, verbs, <location,  <properties, <>immobel,
-	playableEnv;
+	superObj;
 
 
 	*new { |moo, name, maker|
@@ -253,64 +265,127 @@ MooObject  {
 		^super.new.initMooObj(moo, name, maker);
 	}
 
-	initMooObj {|imoo, iname, maker|
+	initMooObj {|imoo, iname, maker, parent|
 
-		var name;
+		var name, superID, superKey, public;
 
-		imoo.notNil.if({
 
-			moo = imoo;
+		moo = imoo ? Moo.default;
+
+		moo.notNil.if({
+
+			super.make_init(moo.api, nil, {});
+
+			//moo = imoo;
 			owner = maker;
-
-			//super.make_init(moo.api, nil, {});
-			playableEnv = NetworkGui.make(moo.api);
-			playableEnv.know = true;
 
 			aliases = [];
 			verbs = IdentityDictionary();
 			properties = IdentityDictionary();
 			immobel = false;
 
+
+			//super.make_init(moo.api, nil, {});
+
+			"about to do some parent stuff".debug(this);
+
+			parent.notNil.if({
+				parent.isKindOf(MooObject).if({
+					superID = parent.id;
+					superObj = parent;
+				}, {
+					superID = parent;
+					superID.isKindOf(SimpleNumber).if({
+						superObj = moo.at(superID);
+					});
+				});
+
+				this.property_(\parent, superID, false, maker);
+			});
+
+			//playableEnv = NetworkGui.make(moo.api);
+			//playableEnv.know = true;
+
+			"about to copy properties".debug(this);
+			this.pr_copyParentProperties();
+
+
+			//playableEnv = NetworkGui.make(moo.api);
+			//playableEnv.know = true;
+
+
 			id = moo.add(this, iname);
 			name = iname ? id.asInteger.asString;
 
-			this.property_(\description, "You see nothing special.", true);
-			this.property_(\name, name, true).value.postln;
+			this.property_(\name, name, true, maker).value.postln;
 
+			this.property(\description).isNil.if({
+				this.property_(\description, "You see nothing special.", true, maker);
+			});
 
-			this.verb_(\look, \this, \none,
-				"""
-{|dobj, iobj, caller|
-dobj.description.postln;
-caller.post(dobj.description.value);
+			this.verb(\look).isNil.if({
+				this.verb_(\look, \this, \none,
+					"""
+{|dobj, iobj, caller, object|
+object.description.postln;
+caller.post(object.description.value);
 }
 """
-			);
+				);
+			});
 
-			this.verb_(\describe, \this, \any,
-				"""
-{|dobj, iobj, caller|
+			this.verb(\describe).isNil.if({
+				this.verb_(\describe, \this, \any,
+					"""
+{|dobj, iobj, caller, object|
 
-(caller == dobj.owner).if({
-dobj.description.value = iobj.asString;
+(caller == object.owner).if({
+object.description.value_(iobj.asString);
 });
 }
 """
-			);
+				);
+			});
 
-			this.verb_(\drop, \this, \none,
-				"""
-{|dobj, iobj, caller|
+			this.verb(\drop).isNil.if({
+				this.verb_(\drop, \this, \none,
+					"""
+{|dobj, iobj, caller, object|
 
 caller.contents.remove(dobj);
 caller.location.announce(\"% dropped %\".format(caller, dobj));
 caller.location.contents = caller.location.contents.add(dobj);
 }
 """
-			);
+				);
+			});
 		});
 	}
 
+
+	formatKey{|key|
+
+		^"%/%".format(key, id).asSymbol;
+	}
+
+	pr_copyParentProperties{
+
+		var public;
+
+
+		superObj.notNil.if({
+			// copy the parent's properties
+			superObj.properties.keys.do({|key|
+				this.properties[key].isNil.if({
+					// is it public?
+					public = superObj.isPublic(key);
+					this.property_(key, superObj.property(key).value, public);
+				});
+			});
+		});
+
+
+	}
 
 
 	alias {|new_alias|
@@ -319,7 +394,20 @@ caller.location.contents = caller.location.contents.add(dobj);
 	}
 
 
-	property_ {|key, ival, publish = true|
+	location_{|loc|
+
+		location = loc;
+		"location %".format(location).debug(this.id);
+	}
+
+	isPublic{|key|
+
+		var publicKey = this.formatKey(key);
+		^ shared.includesKey(publicKey);
+	}
+
+
+	property_ {|key, ival, publish = true, changer|
 
 		var shared;
 
@@ -327,16 +415,27 @@ caller.location.contents = caller.location.contents.add(dobj);
 
 		"property_ % %".format(key, ival).postln;
 
-		((properties.includesKey(key)) || verbs.includesKey(key)).if({
+		verbs.includesKey(key).if({
 			MooError("% name already in use by %".format(key, this.name)).throw;
+		});
+
+		properties.includesKey(key).if({
+			// overwrite. Send notification
+			properties.at(key).value_(ival, changer);
 		}, {
 
-			shared = SharedResource(ival);
-			"shared %".format(shared.value).postln;
-			properties.put(key, shared);
+			//shared = SharedResource(ival);
+			//"shared %".format(shared.value).postln;
+			//properties.put(key, shared);
+			//publish.if({
+			//	playableEnv.addShared("%/%".format(key, id).asSymbol, shared);
+			//});
 			publish.if({
-				playableEnv.addShared("%/%".format(key, id).asSymbol, shared);
+				shared = this.addShared(this.formatKey(key), ival);
+			} , {
+				shared = this.addLocal(this.formatKey(key), ival);
 			});
+			properties.put(key, shared);
 		});
 
 		properties.keys.postln;
@@ -344,6 +443,23 @@ caller.location.contents = caller.location.contents.add(dobj);
 
 		^shared;
 	}
+
+	property {|key|
+		var value;
+
+		key = key.asSymbol;
+
+		value = properties.at(key);
+
+		value.isNil.if({
+			superObj.notNil.if({
+				value = superObj.property(key);
+			});
+		});
+
+		^value
+	}
+
 
 	verb_ {|key, dobj, iobj, func, publish=false|
 
@@ -364,7 +480,16 @@ caller.location.contents = caller.location.contents.add(dobj);
 
 	getVerb {|key|
 
-		^verbs.at(key.asSymbol)
+		var verb = verbs.at(key.asSymbol);
+
+
+		verb.isNil.if({
+			superObj.notNil.if({
+				verb = superObj.getVerb(key);
+			})
+		});
+
+		^verb;
 	}
 
 	verb {|key|
@@ -381,10 +506,10 @@ caller.location.contents = caller.location.contents.add(dobj);
 
 
 		// first try moo stuff
-		"..\ndoesNotUnderstand %".format(selector).debug(this.id);
-		verbs.keys.postln;
-		properties.keys.postln;
-		"..".postln;
+		//"..\ndoesNotUnderstand %".format(selector).debug(this.id);
+		//verbs.keys.postln;
+		//properties.keys.postln;
+		//"..".postln;
 
 		verb = verbs[selector];
 		if (verb.notNil) {
@@ -407,14 +532,26 @@ caller.location.contents = caller.location.contents.add(dobj);
 					"new result is %".format(this.perform(selector)).debug(this.id);
 				}.try({|err| err.postln; });
 			}, {
-				^(properties[selector].value = args[0]);
+				"setter".debug(this.id);
+				property = this.property(selector);
+				property.notNil.if({
+				    //^(properties[selector].value_(*args));
+					// does this belong to us?
+					properties[selector].notNil.if({
+					   ^(properties[selector].value_(*args));
+					} , {
+					    // it must belong to a parent
+						// we need a way of seeing if it's shared or not
+						^this.property_(selector, *args);
+					});
+				});
 			});
 		};
 
-		property = properties[selector];
+		property = this.property(selector);//properties[selector];
 		property.notNil.if({
 			"porperty % %".format(selector, property.value).postln;
-			^property.value
+			^property.value;
 		});
 
 		"not a property".postln;
@@ -446,7 +583,7 @@ caller.location.contents = caller.location.contents.add(dobj);
 	}
 
 
-	match{|key|
+	matches{|key|
 
 		var matches = false;
 
@@ -459,6 +596,18 @@ caller.location.contents = caller.location.contents.add(dobj);
 
 		^matches;
 	}
+
+
+	== {|other|
+
+		other.isKindOf(MooObject).if({
+			^(other.id == this.id);
+		});
+
+		false;
+	}
+
+
 
 }
 
@@ -620,16 +769,20 @@ MooRoom : MooObject {
 		aliases = ["here"];
 		exits = IdentityDictionary();
 
+		this.verb(\announce).isNil.if({
+
 		this.verb_(\announce, \any, \this,
 			// announce "blah" to here
 			"""
 {|dobj, iobj, caller|
 
-iobj.announce(dobj);
+iobj.announce(dobj, caller);
 }
 """
 		);
+		});
 
+		this.verb(\arrive).isNil.if({
 		this.verb_(\arrive, \any, \this,
 			"""
 {|dobj, iobj, caller|
@@ -645,7 +798,9 @@ caller.location = iobj;
 }
 """
 		);
+		});
 
+		this.verb(\depart).isNil.if({
 		this.verb_(\depart, \any, \this,
 			"""
 {|dobj, iobj, caller|
@@ -659,20 +814,21 @@ iobj.announce(\"With a dramatic flounce, % departs\".format(caller.name));
 }
 """
 		);
+		});
 	}
 
-	announce {|str|
+	announce {|str, caller|
 
 		var tell;
 
 		players.do({|player|
-			player.post(str);
+			player.post(str, caller);
 		});
 
 		contents.do ({|thing|
 			thing.verbs.includesKey(\tell).if({
 				tell = thing.verbs.at(\tell);
-				tell.invoke(thing, str);
+				tell.invoke(thing, str, caller);
 			});
 		});
 	}
@@ -701,7 +857,8 @@ iobj.announce(\"With a dramatic flounce, % departs\".format(caller.name));
 
 		semaphore.wait;
 		contents.remove(item);
-		playableEnv.remove(item);
+		//playableEnv.remove(item);
+		this.remove(item);
 		semaphore.signal
 
 	}
@@ -710,7 +867,8 @@ iobj.announce(\"With a dramatic flounce, % departs\".format(caller.name));
 
 		semaphore.wait;
 		contents = contents.add(item);
-		playableEnv.put(item.name.asSymbol, item);
+		//playableEnv.put(item.name.asSymbol, item);
+		this.put(item.name.asSymbol, item);
 		semaphore.signal
 
 	}
@@ -718,14 +876,16 @@ iobj.announce(\"With a dramatic flounce, % departs\".format(caller.name));
 	removePlayer {|player|
 		semaphore.wait;
 		players.remove(player);
-		playableEnv.remove(player);
+		//playableEnv.remove(player);
+		this.remove(player);
 		semaphore.signal
 	}
 
 	addPlayer{|player|
 		semaphore.wait;
 		players = players.add(player);
-		playableEnv.put(player.name.asSymbol, player);
+		//playableEnv.put(player.name.asSymbol, player);
+		this.put(player.name.asSymbol, player);
 		semaphore.signal
 	}
 
@@ -767,7 +927,7 @@ iobj.announce(\"With a dramatic flounce, % departs\".format(caller.name));
 
 	env {
 
-		^playableEnv
+		//^playableEnv
 	}
 
 
@@ -781,7 +941,7 @@ iobj.announce(\"With a dramatic flounce, % departs\".format(caller.name));
 		found.isNil.if({
 			found = this.findObj(selector);
 			found.isNil.if({
-				found = playableEnv[selector];
+				found = this[selector];//playableEnv[selector];
 			});
 		});
 

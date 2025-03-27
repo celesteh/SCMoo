@@ -104,7 +104,7 @@ MooParser {
 
 	call {
 
-		var d_obj, i_obj, vfunc, found;
+		var d_obj, i_obj, vfunc, found, object;
 
 		"verb: %".format(verb).postln;
 
@@ -118,27 +118,56 @@ MooParser {
 
 		// is this a verb on the direct object?
 		vfunc = this.checkObj(d_obj);
+		object = d_obj;
+
+
 		vfunc.isNil.if({
 			i_obj.notNil.if({ // perhaps it's on the indirect object?
 				vfunc = this.checkObj(i_obj);
+				object = i_obj;
 			})
 		});
 
 		// see if it's on the room
 		vfunc.isNil.if({
 			vfunc = this.checkObj(actor.location);
+			vfunc.notNil.if({
+
+				object = actor.location;
+
+				d_obj.isNil.if({
+					d_obj = actor.location;
+
+				},{
+						i_obj.isNil.if({
+							i_obj = actor.location
+						});
+				});
+			});
 		});
 
-		// is it on the caller?
+			// is it on the caller?
 		vfunc.isNil.if({
 			vfunc = this.checkObj(actor);
+			vfunc.notNil.if({
+
+				object = actor;
+
+				d_obj.isNil.if({ d_obj = actor },
+					{
+						i_obj.isNil.if({
+							i_obj = actor
+						});
+				});
+
+			});
 		});
 
 
 		vfunc.notNil.if({ // call it!!!
 
 			//vfunc.func.value(d_obj, i_obj, actor);
-			vfunc.invoke(d_obj, i_obj, actor);
+			vfunc.invoke(d_obj, i_obj, actor, object);
 
 		});
 	}
@@ -279,6 +308,14 @@ MooParser {
 		});
 
 		found.not.if({
+			(key ==\here).if({
+				found = true;
+				obj = actor.location;
+			});
+		});
+
+
+		found.not.if({
 			actor.contents.do({|item|
 
 				found = item.matches(key);
@@ -405,12 +442,13 @@ MooVerb{
 
 	}
 
-	invoke {|dobj, iobj, caller|
+	invoke {|dobj, iobj, caller, object|
 		var str, f;
 
 		str = func.value;
 
-		"-----------------------------------------------\ninvoke\ncaller is %".format(caller.name).postln;
+		"-----------------------------------------------\ninvoke\ncaller is %".format(caller.name.value).debug("verb");
+		caller.dumpBackTrace;
 
 		this.pass(str).not.if({
 			MooReservedWordError("Verb contains disallowed commands", this.check(str)).throw;
@@ -419,7 +457,7 @@ MooVerb{
 		"invoke".postln;
 		f = str.compile.value; // "{|a| a.post}".compile.value returns a function
 
-		f.value(dobj, iobj, caller);
+		f.value(dobj, iobj, caller, object);
 
 	}
 
