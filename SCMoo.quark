@@ -1,0 +1,16 @@
+(
+	name: 		"SCMoo",
+	summary:		"A Moo in SuperCollider",
+	author: 		"Charles Celeste Hutchins",
+
+	version:		0.001, // must be a float
+	organization: 	"University of Kent",
+	country: 		"UK",
+	since: 		"2025",
+	helpdoc: "Moo",
+	url:           "https://github.com/celesteh/SCMoo",
+    schelp: "Moo",
+    dependencies: ["BiLETools", "JSONlib"],
+    license: "GPL",
+    copyright: "Charles Hutchins 2025"
+)
