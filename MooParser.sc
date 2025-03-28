@@ -436,6 +436,14 @@ MooVerb{
 			"% % % % on %".format(verb, dobj, iobj, obj.name));
 	}
 
+	toJSON {|converter|
+
+		^ "{ \"verb\": \"%\", ".format(verb) +
+		"\"args\": [ %, %]".format(dobj, iobj) +
+		"\"func\": \"%\" }".format(converter.convertToJSON(func))
+
+	}
+
 	verb {
 
 		^verb.value

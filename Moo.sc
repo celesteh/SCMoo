@@ -607,8 +607,29 @@ caller.location.contents = caller.location.contents.add(dobj);
 		false;
 	}
 
+	toJSON{
+
+		var encoder, props;
+
+		encoder = MooCustomEncoder();
+
+		^"{ % }".format(this.pr_JSONContents(encoder));
 
 
+	}
+
+	pr_JSONContents {|encoder|
+
+		var props = properties.collect({|p| JSONConverter.convertToJSON(p, encoder) });
+
+		^"\"id\": %, ".format(id.asCompileString) +
+		"\"verbs\": %,".format(JSONConverter.convertToJSON(verbs)) +
+		"\"properties\": [ % ],".format(JSONConverter.convertToJSON(props)) +
+		"\"aliases\": %,".format(JSONConverter.convertToJSON(aliases)) +
+		"\"location\": %,".format(location !? { location.id } ? "null") +
+		"\"immobel\": %,".format(immobel.asCompileString) +
+		"\"owner\": % ".format(owner !? {owner.id} ? "null")
+	}
 }
 
 
@@ -952,4 +973,53 @@ iobj.announce(\"With a dramatic flounce, % departs\".format(caller.name));
 
 
 	}
+
+	pr_JSONContents {|encoder|
+
+		/*
+		var props = properties.collect({|p| JSONConverter.convertToJSON(p, encoder) });
+
+		^"\"id\": %, ".format(id.asCompileString) +
+		"\"verbs\": %,".format(JSONConverter.convertToJSON(verbs)) +
+		"\"properties\": [ % ],".format(JSONConverter.convertToJSON(props)) +
+		"\"aliases\": %,".format(JSONConverter.convertToJSON(aliases)) +
+		"\"location\": %,".format(location !? { location.id } ? "null") +
+		"\"immobel\": %,".format(immobel.asCompileString) +
+		"\"owner\": % ".format(owner !? {owner.id} ? "null")
+		*/
+
+		var stuff, departures;
+
+		stuff = contents.collect({|c| c !? { c.id } ? "null" });
+		departures = exits.keysValuesDo({|key, val| "{ \"key\": \"%\", \"val\": %}".format(key, val !? {val.id} ? "null") });
+
+		^super.pr_JSONContents(encoder) +
+		"\"contents\": [ % ]," .format(stuff.join(", ")) +
+		"\"exits\": [ % ]".format(departures.join(",\n"));
+	}
+
+
+
+	/*
+	toJSON{
+
+		var encoder, props, stuff, departures;
+
+		encoder = MooCustomEncoder();
+
+		props = properties.collect({|p| JSONConverter.convertToJSON(p, encoder) });
+		stuff = contents.collect({|c| c !? { c.id } ? "null" });
+		departures = exits.keysValuesDo({|key, val| "{ \"key\": \"%\", \"val\": %}".format(key, val !? {val.id} ? "null") });
+
+		^ "{ \"id\": %, ".format(id.asCompileString) +
+		"\"verbs\": %,".format(JSONConverter.convertToJSON(verbs)) +
+		"\"properties\": [ % ],".format(props.join(",\n")) +
+		"\"aliases\": %,".format(JSONConverter.convertToJSON(aliases)) +
+		"\"location\": %,".format(location !? { location.id } ? "null") +
+		"\"immobel\": %,".format(immobel.asCompileString) +
+		"\"contents\": [ % ]," .format(stuff.join(", ")) +
+		"\"exits\": [ % ]".format(departures.join(",\n")) +
+		"\"owner\": % }".format(owner !? {owner.id} ? "null")
+	}
+	*/
 }
