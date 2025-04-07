@@ -395,22 +395,26 @@ MooJSONConverter : JSONlib {
 
 		var output, allKeys, distance, count, tie, best, firstLetter, index;
 
-		output = this.associationAt(key.asSymbol);
+		output = this.associationAt(key.asSymbol).value;
 
 		key = key.asString;
 		this.isKindOf(IdentityDictionary).not.if({
-			output = output ? this.associationAt(key);
-			output = output ? this.associationAt(key.stripWhiteSpace);
+			output = output ? this.associationAt(key).value;
+			output = output ? this.associationAt(key.stripWhiteSpace).value;
 		});
 
-		output = output ? this.associationAt(key.stripWhiteSpace.asSymbol);
+		output = output ? this.associationAt(key.stripWhiteSpace.asSymbol).value;
 
 		output.isNil.if({
-			allKeys = this.keys.select({|akey| akey.asString.compare(key, true) == 0 });
+			allKeys = this.keys.select({|akey| akey.asString.compare(key, true) == 0 }).asList;
 
 			// if there's just one result, we found it
 			(allKeys.size == 1).if({
-				^this.associationAt(allKeys[0]);
+				//"one result".debug(this);
+				output = this.associationAt(allKeys[0]).value;
+				output.isNil.if({
+					output = this.associationAt(allKeys[0].asSymbol).value;
+				});
 			});
 
 			// if there's more than one result, pick the closest
@@ -455,8 +459,15 @@ MooJSONConverter : JSONlib {
 				});
 
 				index = best;
+							index.debug(this);
+			output = this.associationAt(index);
+			output.key.isNil.if({
+				output = this.associationAt(index.asSymbol)
 			});
-			^this.associationAt(index);
+			//^( ? this.associationAt(index.asSymbol));
+			^output.value;
+
+			});
 		});
 
 		// we have it or it's nil

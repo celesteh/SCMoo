@@ -118,12 +118,17 @@ Moo {
 			"make root".debug(this);
 			root = MooRoot(this, "Root");
 			"made root".debug(this);
+
 			genericObject = MooObject(this, "object", root, -1);
+			MooParser.reserveWord(\object, genericObject);
+
+
 			"make a generic player".debug(this);
 			genericPlayer = MooPlayer(this, "player", nil);
 			"made generic player, %".format(genericPlayer.name).debug(this);
 			genericPlayer.dump;
 			root.parent = genericPlayer;
+			MooParser.reserveWord(\player, genericPlayer);
 
 			genericRoom = MooRoom(this, "room", root, genericObject);
 			genericRoom.description_("An unremarkable place.");
@@ -167,6 +172,7 @@ Moo {
 				}.asCompileString;
 
 			);
+			MooParser.reserveWord(\room, genericRoom);
 
 			lobby = MooRoom(this, "Lobby", root, genericRoom);
 			me = root;
@@ -297,9 +303,16 @@ Moo {
 		var found, arr, obj;
 		// if there is more than one answer, we pick randomly.
 
-		found = objects.values.select({|o| o.name.asString.compare(name.asString, true) == 0 }).choose;
+		found = MooParser.reservedWord(name);
+
+		found.isNil.if({
+			found = objects.values.select({|o|
+				o.name.asString.compare(name.asString, true) == 0;
+			}).asList.choose;
+		});
+
 		found.notNil.if({
-			arr = objects.values.scramble;
+			arr = objects.values.asList.scramble;
 			{found.isNil && (arr.size > 0)}.while({
 				obj = arr.pop;
 				(obj.aliases.select({|a| a.asString.compare(name.asString, true) == 0 }).asList.size > 0).if({

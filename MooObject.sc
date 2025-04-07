@@ -6,7 +6,7 @@ MooObject : NetworkGui  {
 
 	*new { |moo, name, maker, parent|
 		"MooObject.new".postln;
-		^super.new.initMooObj(moo, name, maker, parent);
+		^super.new.initMooObj(moo, name, maker, parent ? moo.genericObject);
 	}
 
 
@@ -617,7 +617,7 @@ MooRoom : MooObject {
 
 	*new { |moo, name, maker, parent|
 
-		^super.new(moo, name, maker, parent).initRoom();
+		^super.new(moo, name, maker, parent ? moo.genericRoom ? moo.genericObject).initRoom();
 	}
 
 	initRoom {

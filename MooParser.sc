@@ -14,6 +14,16 @@ MooParser {
 		reservedWords = reservedWords.put(key.asSymbol, object);
 	}
 
+	*reservedWord{|key|
+		var result;
+		result = reservedWords.at(key.asSymbol);
+		result.isNil.if({
+			result.atIgnoreCase(key);
+		});
+
+		^result;
+	}
+
 
 	*new {|player, string|
 		^super.new.init(player, string);
