@@ -12,7 +12,7 @@ MooObject : NetworkGui  {
 
 	initMooObj {|imoo, iname, maker, parent|
 
-		var name, superID, superKey, public;
+		var /*name,*/ superID, superKey, public, str;
 
 		// iff add is flase, this has been caled in a weird way
 
@@ -71,11 +71,18 @@ MooObject : NetworkGui  {
 			//playableEnv = NetworkGui.make(moo.api);
 			//playableEnv.know = true;
 
-			id = (superID.asString ++ this.identityHash.asString).asSymbol;
+			str = superID.asString;
+			id = (str.copyRange(str.size - 2.rrand(8),str.size-1) ++ Date.getDate.rawSeconds.asString)
+			.select({|d|
+				d.isDecDigit;
+			}).asString.asSymbol;
+			//(superID.asString ++ this.identityHash.asString).asSymbol;
 			id = moo.add(this, iname, this.id);
 			name = iname ? id.asString;
 
-			this.property_(\name, name, true, maker).value.postln;
+			name.debug(this);
+
+			this.property_(\name, name, true, maker).action_(this, {|v| this.name = v.value });//.value.postln;
 
 			this.property(\description).isNil.if({
 				this.property_(\description, "You see nothing special.", true, maker);
@@ -86,7 +93,7 @@ MooObject : NetworkGui  {
 
 					{|dobj, iobj, caller, object|
 						object.description.postln;
-						caller.post(object.description.value);
+						caller.postUser(object.name.asString +"\n" + object.description.value);
 					}.asCompileString;
 
 				);
@@ -211,7 +218,9 @@ MooObject : NetworkGui  {
 
 		properties.includesKey(key).if({
 			// overwrite. Send notification
-			properties.at(key).value_(ival, changer);
+			//properties.at(key).value_(ival, changer);
+			shared = properties.at(key);
+			shared.value_(ival, changer);
 		}, {
 
 			//shared = SharedResource(ival);
@@ -299,8 +308,13 @@ MooObject : NetworkGui  {
 	doesNotUnderstand { arg selector ... args;
 		var verb, property, func;
 
+		this.dumpBackTrace;
+
 		selector = selector.asSymbol;
 
+		if(this.respondsTo(selector), {
+			^this.perform(selector, *args);
+		});
 
 		// first try moo stuff
 		//"..\ndoesNotUnderstand %".format(selector).debug(this.id);
@@ -308,14 +322,14 @@ MooObject : NetworkGui  {
 		//properties.keys.postln;
 		//"..".postln;
 
-		verb = verbs[selector];
+		verb = this.getVerb(selector);//verbs[selector];
 		if (verb.notNil) {
 			"verb %".format(selector).postln;
 			//^func.functionPerformList(\value, this, args);
 			^verb.invoke(args[0], args[1], args[2], args[3]);
 		};
 
-		"not a verb".postln;
+		"% is not a verb".format(selector).debug(this);
 		verbs.keys.postln;
 
 		if (selector.isSetter) {
@@ -599,7 +613,7 @@ MooStage : MooObject {
 
 MooRoom : MooObject {
 
-	var contents, players, exits, semaphore;
+	var <contents, <players, <exits, semaphore;
 
 	*new { |moo, name, maker, parent|
 
@@ -641,7 +655,9 @@ MooRoom : MooObject {
 						caller.dumpStack;
 						iobj.addPlayer(caller);
 						caller.location = iobj;
+						iobj.getVerb(\look).invoke(iobj, iobj, caller, iobj);
 					});
+
 				}.asCompileString;
 
 			);
@@ -669,7 +685,7 @@ MooRoom : MooObject {
 		var tell;
 
 		players.do({|player|
-			player.post(str, caller);
+			player.postUser(str, caller);
 		});
 
 		contents.do ({|thing|
@@ -685,7 +701,7 @@ MooRoom : MooObject {
 
 		players.do({|player|
 			(player != excluded).if({
-				player.post(str);
+				player.postUser(str);
 			});
 		});
 

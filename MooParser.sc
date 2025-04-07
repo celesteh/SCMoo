@@ -1,7 +1,19 @@
 
 MooParser {
 
+	classvar <reservedWords;
 	var actor, input, verb, dobj, preposition, iobj;
+
+
+	* initClass{
+
+		reservedWords = IdentityDictionary();
+	}
+
+	*reserveWord{|key, object| // optionally tie the word to a thing
+		reservedWords = reservedWords.put(key.asSymbol, object);
+	}
+
 
 	*new {|player, string|
 		^super.new.init(player, string);
@@ -110,15 +122,26 @@ MooParser {
 
 		// try to match the dobj to an object
 		dobj.notNil.if({
-			d_obj = this.findObj(dobj);
+			this.isString(dobj).if({
+				d_obj = dobj;
+			} , {
+				d_obj = this.findObj(dobj);
+			});
 		});
 
 		// try to match the iobj to an object
-		iobj.notNil.if({ i_obj = this.findObj(i_obj) });
+		iobj.notNil.if({
+			this.isString(iobj).if({
+				i_obj = iobj;
+			} , {
+				i_obj = this.findObj(i_obj) });
+		});
 
 		// is this a verb on the direct object?
-		vfunc = this.checkObj(d_obj);
-		object = d_obj;
+		d_obj .notNil.if({
+			vfunc = this.checkObj(d_obj);
+			object = d_obj;
+		});
 
 
 		vfunc.isNil.if({
@@ -153,11 +176,12 @@ MooParser {
 
 				object = actor;
 
-				d_obj.isNil.if({ d_obj = actor },
-					{
-						i_obj.isNil.if({
-							i_obj = actor
-						});
+				d_obj.isNil.if({
+					d_obj = actor
+				},{
+					i_obj.isNil.if({
+						i_obj = actor
+					});
 				});
 
 			});
@@ -210,6 +234,12 @@ MooParser {
 		^arr;
 	}
 
+	isString {|token|
+
+		^(token.beginsWith("\"") && token.endsWith("\""));
+
+	}
+
 	pr_arrFlat{|arr, count|
 
 		var assembled = [];
@@ -228,32 +258,70 @@ MooParser {
 	}
 
 
+	specialCase{
+
+		var found = false;
+
+		// check for a " say
+		((input[0] == $\") && input.copyRange(1, input.size-1).includes($\").not).if({
+
+			// there is exactly one quote at the start of the line
+			verb = \say;
+			dobj = input++"\"";
+			found = true;
+		});
+
+		// check for a / pose
+		(found.not && (input[0] == $\/)).if({
+
+			verb = \pose;
+			dobj = "\"" ++ input.copyRange(1, input.size-1).stripWhiteSpace ++ "\"";
+			found = true;
+		});
+
+		^found;
+	}
+
+
 	parse {
 
 		var deStringed, tokens;
 
-		deStringed = this.identifyStrings().collect({|str| str.stripWhiteSpace });
+		this.specialCase.not.if({
 
-		tokens = deStringed.collect({|str|
-			(str.beginsWith("\"") || str.endsWith("\"")).not.if({
+			deStringed = this.identifyStrings().collect({|str| str.stripWhiteSpace });
+
+			tokens = deStringed.collect({|str|
+				/*
+				(str.beginsWith("\"") || str.endsWith("\"")).not.if({
 				str.split($ );
-			}, {
+				}, {
 				str;
-			})
+				})
+				*/
+				this.isString(str).if({
+					str;
+				} , {
+					str.split($ );
+				});
+			});
+
+			tokens = this.pr_arrFlat(tokens, 0);
+
+			//"flattened".postln;
+
+			//tokens.postln;
+			tokens.debug(this);
+
+			verb = tokens[0];
+			(tokens.size > 1).if({ dobj = tokens[1]; });
+
+			(tokens.size > 2).if ({ iobj = tokens.last; });
 		});
 
-		tokens = this.pr_arrFlat(tokens, 0);
+		//tokens.postln;
+		[verb, dobj, iobj].debug(this);
 
-		"flattened".postln;
-
-		tokens.postln;
-
-		verb = tokens[0];
-		(tokens.size > 1).if({ dobj = tokens[1]; });
-
-		(tokens.size > 2).if ({ iobj = tokens.last; });
-
-		tokens.postln;
 	}
 
 

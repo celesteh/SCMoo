@@ -300,35 +300,34 @@ MooPlayer  : MooObject {
 			}); //uses a property so doesn't need to be published
 			});*/
 
-			this.verb_(\tell, \this, \any,  """
-{|dobj, iobj, caller, object|
-dobj.postUser(iobj.asString, caller);
-}
-"""
-			);
+		this.verb_(\tell, \this, \any,
+			{|dobj, iobj, caller, object|
+				dobj.postUser(iobj.asString, caller);
+			}.asCompileString;
+		);
 
-			this.verb_(\say, \this, \any,  """
-{|dobj, iobj, caller, object|
-caller.location.announceExcluding(caller, \"% says, \\\"%\\\"\".format(caller.name, iobj.asString));
-caller.postUser(\"You say,  \\\"%\\\"\".format(iobj.asString));
-}
-"""
-			);
-			this.verb_(\pose, \this, \any, """
-{|dobj, iobj, caller, object|
-caller.location.announce(\"% %\".format(caller.name, iobj.asString));
-}
-"""
-			);
+		this.verb_(\say, \this, \any,
+			{|dobj, iobj, caller, object|
+				caller.location.announceExcluding(caller, "% says, \"%\"".format(caller.name,
+					dobj.asString.stripEnclosingQuotes));
+				caller.postUser("You say,  \"%\"".format(dobj.asString.stripEnclosingQuotes));
+			}.asCompileString;
+		);
 
+		this.verb_(\pose, \this, \any,
+			{|dobj, iobj, caller, object|
+				caller.location.announce("% %".format(caller.name, dobj.asString.stripEnclosingQuotes));
+			}.asCompileString;
+		);
 
 
-			moo.api.add("postUser/%".format(this.id).asSymbol, { arg id, str;
 
-				(id == this.id).if({
-					this.postUser(str)
-				});
-			}, "For chatting. Usage: post/id, id, text");
+		moo.api.add("postUser/%".format(this.id).asSymbol, { arg id, str;
+
+			(id == this.id).if({
+				this.postUser(str)
+			});
+		}, "For chatting. Usage: post/id, id, text");
 
 
 
@@ -344,14 +343,16 @@ caller.location.announce(\"% %\".format(caller.name, iobj.asString));
 
 		"in post".postln;
 		// post is always local ARG NO IT's NOT . . . wait, is it? i don't fucking know....
-		me.if({
-			str.postln;
-		}, {
+		//me.if({
+		//	str.postln;
+		//}, {
 			// do the api call? - only if we've originated the need for it
-			(caller == this).if({
+		((caller == this)||me).if({
 				moo.api.sendMsg("post/%".format(this.id).asSymbol, this.id, str);
-			});
+		},{
+			"dont's post".debug(this);
 		});
+		//});
 	}
 
 	//postln {|str, caller| this.post(str, caller) }

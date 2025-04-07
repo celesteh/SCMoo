@@ -18,10 +18,13 @@ Moo {
 		moo = Moo(api, json, loadType);
 
 		AppClock.sched(0, {
-			doc = TextView.new(Window.new("", Rect(100, 100, 600, 700)).front, Rect(0, 0, 600, 700)).resize_(5);
+			//doc = TextView.new(Window.new("", Rect(100, 100, 600, 700)).front, Rect(0, 0, 600, 700)).resize_(5);
 
-			moo.me.me = true;
-			moo.gui(doc);
+			//moo.me.me = true;
+			moo.gui({
+				moo.lobby.arrive(moo.me,moo.lobby, moo.me, moo.lobby);
+
+			});
 
 			nil;
 		});
@@ -104,7 +107,7 @@ Moo {
 
 		((objects.size == 0) || (json.isNil)).if({
 
-			"json is nil".postln;
+			"json is nil".debug(this);
 			//moo.dump;
 			//api.dump;
 			//this.dump;
@@ -124,10 +127,51 @@ Moo {
 
 			genericRoom = MooRoom(this, "room", root, genericObject);
 			genericRoom.description_("An unremarkable place.");
-			lobby = MooRoom(this, "Lobby", root, genericRoom);
-			lobby.arrive(root,lobby, root, lobby);
+			genericRoom.verb_(\look, \this, \none,
 
+				{|dobj, iobj, caller, object|
+					var stuff, others, last, exits;
+					//object.description.postln;
+					caller.postUser(object.name.asString +"\n" + object.description.value);
+					(object == caller.location).if({
+						stuff = object.contents;
+						(stuff.size > 0).if({
+							stuff = stuff.collect({|o| o.name });
+							stuff = stuff.join(", ");
+							caller.postUser("You see:" + stuff);
+						});
+						others = object.players.select({|player| player != caller });
+						(others.size == 1).if({
+							caller.postUser(others[0].name.asString + "is here.");
+						}, {
+							(others.size > 1).if({
+								last = others.pop;
+								others = others.collect({|o| o.name });
+								others = others.join(", ");
+								caller.postUser(others ++", and" + last.name + "are here.");
+							});
+						});
+						exits = object.exits.keys;
+						(exits.size == 1).if({
+							caller.postUser("You can exit" + exits[0].asString);
+						}, {
+							(exits.size > 1).if({
+								caller.postUser("Exits are:" + exits.join(", "));
+							}, {
+								(exits.size==0).if({
+									caller.postUser("There is no way out.");
+								});
+							});
+						});
+					});
+				}.asCompileString;
+
+			);
+
+			lobby = MooRoom(this, "Lobby", root, genericRoom);
 			me = root;
+
+
 
 			//objects = [MooRoom(this, "Lobby", objects[0])];
 			//index = 2;
@@ -249,7 +293,27 @@ Moo {
 	}
 
 
-	gui {|doc|
+	find{|name|
+		var found, arr, obj;
+		// if there is more than one answer, we pick randomly.
+
+		found = objects.values.select({|o| o.name.asString.compare(name.asString, true) == 0 }).choose;
+		found.notNil.if({
+			arr = objects.values.scramble;
+			{found.isNil && (arr.size > 0)}.while({
+				obj = arr.pop;
+				(obj.aliases.select({|a| a.asString.compare(name.asString, true) == 0 }).asList.size > 0).if({
+					found = obj;
+				});
+			});
+		});
+
+		^found
+	}
+
+	gui {|callback|
+
+		/*
 
 		var string;
 
@@ -288,7 +352,7 @@ Moo {
 
 			if( mod.isAlt && altArrow.value,
 				{ // alt + left or up or right or down arrow keys
-					"eval".postln;
+					"eval".debug(this);
 					string = doc.selectedString;
 					MooParser(me, string);
 
@@ -299,6 +363,10 @@ Moo {
 
 
 		^doc;
+
+		*/
+
+		^MooGUI(this,callback);
 
 
 	}
