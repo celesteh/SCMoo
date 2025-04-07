@@ -300,9 +300,21 @@ MooParser {
 
 		var obj, found = false;
 
+		obj = key;
+
+		key.isKindOf(SimpleNumber).if({
+			// it's the object ID
+			obj = actor.moo.at(key);
+			obj.notNil.if({
+				found = true;
+			}, {
+				obj = key; // nevermind
+			});
+		});
+
 		key = key.asSymbol;
 
-		(key ==\me).if({
+		(found.not && (key ==\me)).if({
 			found = true;
 			obj = actor;
 		});
@@ -316,31 +328,34 @@ MooParser {
 
 
 		found.not.if({
-			actor.contents.do({|item|
+			//actor.contents.do({|item|
 
-				found = item.matches(key);
-				obj = item;
-			});
+			//	found = item.matches(key);
+			//	obj = item;
+			//});
+			obj = actor.contents.detect({|item| found = item.matches(key); })
 		});
 
 		found.not.if ({
-			actor.location.players.do({|item|
+			//actor.location.players.do({|item|
 
 			//found = matchObj(key, item);
-				found = item.matches(key);
-				obj = item;
-			});
+			//	found = item.matches(key);
+			//	obj = item;
+			//});
+			obj = actor.location.players.detect({|item| found = item.matches(key); })
 		});
 		found.not.if ({
-			actor.location.contents.do({|item|
+			//actor.location.contents.do({|item|
 
 				//found = matchObj(key, item);
-				found = item.matches(key);
-				obj = item;
-			});
+			//	found = item.matches(key);
+			//	obj = item;
+			//});
+			obj = actor.location.contents.detect({|item| found = item.matches(key); })
 		});
 
-		found.not.if.({ obj = key });
+		//found.not.if.({ obj = key });
 
 		^obj
 
@@ -355,7 +370,7 @@ MooParser {
 MooVerb{
 
 	classvar <disallowed;
-	var verb, <dobj, <iobj, funcstr, <obj, func;
+	var verb, <dobj, <iobj, funcstr, <obj, func, owner;
 
 	*initClass {
 
@@ -379,12 +394,32 @@ MooVerb{
 	}
 
 
-	*new {|verb, dobj, iobj, func, obj, publish|
+	*pass {|str|
+		var pass, problem_count;
 
-		^super.newCopyArgs(verb, dobj, iobj, func, obj).init(publish);
+		problem_count = MooVerb.disallowed.collect({|naughty|
+			str.find(naughty, true).isNil.if({0}, {1}) + // 1 for a match, 0 for no match
+			str.find(naughty.reverse, true).isNil.if({0}, {1});
+		}).sum;
+
+		pass = (problem_count ==0);
+		^pass;
+	}
+
+
+
+	*new {|verb, dobj, iobj, func, obj, publish, owner|
+
+		^super.newCopyArgs(verb, dobj, iobj, func, obj, owner).init(publish);
 	}
 
 	init{ arg publish = false;
+
+		owner = owner ? obj.owner;
+
+		funcstr.isKindOf(String).not.if({
+			funcstr = funcstr.asCompileString;
+		});
 
 		this.pass(funcstr).not.if({
 			MooReservedWordError("Verb contains disallowed commands", this.check).throw;
@@ -402,17 +437,9 @@ MooVerb{
 	}
 
 	pass {|str|
-		var pass, problem_count;
 
 		str = str ? funcstr;
-
-		problem_count = MooVerb.disallowed.collect({|naughty|
-			str.find(naughty, true).isNil.if({0}, {1}) + // 1 for a match, 0 for no match
-			str.find(naughty.reverse, true).isNil.if({0}, {1});
-		}).sum;
-
-		pass = (problem_count ==0);
-		^pass;
+		^this.class.pass(str);
 	}
 
 	check{|str|
@@ -439,8 +466,9 @@ MooVerb{
 	toJSON {|converter|
 
 		^ "{ \"verb\": \"%\", ".format(verb) +
-		"\"args\": [ %, %]".format(dobj, iobj) +
-		"\"func\": \"%\" }".format(converter.convertToJSON(func))
+		"\"args\": [\"%\", \"%\"],".format(dobj, iobj) +
+		"\"func\": %, ".format(converter.convertToJSON(func)) +
+		"\"owner\": % }" .format(converter.convertToJSON(owner));
 
 	}
 

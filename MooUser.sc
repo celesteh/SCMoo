@@ -25,11 +25,30 @@ MooPermission {
 		level = 0;
 	}
 
+	*fromJSON {|str, converter|
+		^super.new.fromJSON(str, converter);
+	}
+
+	fromJSON {|str, converter|
+
+		var input;
+
+		input = str.split(":").last;
+		input = input.stripWhiteSpace;
+		input = input.stripEnclosingQuotes;
+		level = this.asInteger(input);
+	}
+
+
 	asSymbol {|input|
 
 		var output;
 
-		input.isKindOf(SimpleNumer).if({
+		input = input ? level;
+
+		"simple number? %".format(input.isKindOf(SimpleNumber)).debug(this);
+
+		input.isKindOf(SimpleNumber).if({
 			output =  MooPermission.at(input.asInteger);
 		}, {
 			output = input;
@@ -131,6 +150,15 @@ MooPermission {
 	}
 
 
+	toJSON {|converter|
+
+		var sym;
+
+		sym = this.asSymbol;
+		sym.asString.debug(this);
+
+		^"\"%\"".format(sym.asString);
+	}
 
 }
 
@@ -157,7 +185,7 @@ MooRoot : MooPlayer {
 	*new { |moo, name|
 		"MooRoot.new".postln;
 		name.postln;
-		^super.new.initRoot(moo, name);
+		^super.new(moo, name, nil, false).initRoot(moo, name);
 	}
 
 	initRoot {|moo, name|
@@ -169,8 +197,8 @@ MooRoot : MooPlayer {
 		//moo = moo ? Moo.default;
 
 
-		super.initPlayer(moo, name, nil, false);
-		(id < 2).if({
+		//super.initPlayer(moo, name, nil, false);
+		(this.id.asString.asInteger < 2).if({
 			permissions = MooRootPermission();
 		}, {
 			MooPermissionsError("Not Root").throw;
@@ -179,6 +207,10 @@ MooRoot : MooPlayer {
 
 	me_{|bool|
 		me = bool
+	}
+
+	id {
+		^\0
 	}
 
 	parent_ {|genericPlayer|
@@ -209,32 +241,41 @@ MooPlayer  : MooObject {
 	var contents, ownedObjects, <>user, <me, <permissions;
 
 	*new { |moo, name, user, self=false|
-		"MooPlayer.new".postln;
-		^super.new.initPlayer(moo,name, user, self);
+		var uname;
+
+		//"MooPlayer.new".postln;
+
+		uname = name ? user.notNil.if({ user.nick });
+		self.if({
+			uname = uname ? moo.api.nick;
+		});
+		//*new { |moo, name, maker, parent|
+
+		^super.new(moo, uname, \this, moo.genericPlayer ? moo.genericObject).initPlayer(user, self);
 	}
 
-	initPlayer {|imoo, iname, iuser, self=false|
+	initPlayer {|iuser, self=false|
 
 		var pronouns;
 
 		"initPlayer".postln;
 
-		(imoo.notNil || iname.notNil || iuser.notNil).if({
+		//(imoo.notNil || iname.notNil || iuser.notNil).if({
 
-			imoo = imoo ? Moo.default;
+			//imoo = imoo ? Moo.default;
 
 			user = iuser;
-			iname = iname ? user.notNil.if({ user.nick });
+			//iname = iname ? user.notNil.if({ user.nick });
 
 			me = self;
-			me.if({
-				iname = iname ? imoo.api.nick;
-			});
+			//me.if({
+			//	iname = iname ? imoo.api.nick;
+			//});
 
 
 			permissions = MooPermission();
 
-			super.initMooObj(imoo, iname, this, imoo.genericPlayer ? imoo.genericObject);
+			//super.initMooObj(imoo, iname, this, imoo.genericPlayer ? imoo.genericObject);
 			owner = this;
 
 
@@ -261,7 +302,7 @@ MooPlayer  : MooObject {
 
 			this.verb_(\tell, \this, \any,  """
 {|dobj, iobj, caller, object|
-dobj.post(iobj.asString, caller);
+dobj.postUser(iobj.asString, caller);
 }
 """
 			);
@@ -269,7 +310,7 @@ dobj.post(iobj.asString, caller);
 			this.verb_(\say, \this, \any,  """
 {|dobj, iobj, caller, object|
 caller.location.announceExcluding(caller, \"% says, \\\"%\\\"\".format(caller.name, iobj.asString));
-caller.post(\"You say,  \\\"%\\\"\".format(iobj.asString));
+caller.postUser(\"You say,  \\\"%\\\"\".format(iobj.asString));
 }
 """
 			);
@@ -282,16 +323,16 @@ caller.location.announce(\"% %\".format(caller.name, iobj.asString));
 
 
 
-			imoo.api.add("post/%".format(this.id).asSymbol, { arg id, str;
+			moo.api.add("postUser/%".format(this.id).asSymbol, { arg id, str;
 
 				(id == this.id).if({
-					this.post(str)
+					this.postUser(str)
 				});
 			}, "For chatting. Usage: post/id, id, text");
 
 
 
-		});
+		//});
 
 
 
@@ -299,7 +340,7 @@ caller.location.announce(\"% %\".format(caller.name, iobj.asString));
 
 	isPlayer{ ^true }
 
-	post {|str, caller|
+	postUser {|str, caller|
 
 		"in post".postln;
 		// post is always local ARG NO IT's NOT . . . wait, is it? i don't fucking know....
@@ -313,7 +354,9 @@ caller.location.announce(\"% %\".format(caller.name, iobj.asString));
 		});
 	}
 
-	postln {|str, caller| this.post(str, caller) }
+	//postln {|str, caller| this.post(str, caller) }
+
+
 
 	remove {|item|
 
@@ -337,7 +380,7 @@ caller.location.announce(\"% %\".format(caller.name, iobj.asString));
 
 	permissions_ {|status, caller|
 
-		// only a wizard can set a wizard
+		// only a wizard can set permissions
 		caller.wizard.if({
 			//wizard = status;
 			permissions.level = status;
@@ -349,6 +392,37 @@ caller.location.announce(\"% %\".format(caller.name, iobj.asString));
 	login {
 
 
+	}
+
+	pr_JSONContents {|converter|
+
+		/*
+		var props = properties.collect({|p| JSONConverter.convertToJSON(p, encoder) });
+
+		^"\"id\": %, ".format(id.asCompileString) +
+		"\"verbs\": %,".format(JSONConverter.convertToJSON(verbs)) +
+		"\"properties\": [ % ],".format(JSONConverter.convertToJSON(props)) +
+		"\"aliases\": %,".format(JSONConverter.convertToJSON(aliases)) +
+		"\"location\": %,".format(location !? { location.id } ? "null") +
+		"\"immobel\": %,".format(immobel.asCompileString) +
+		"\"owner\": % ".format(owner !? {owner.id} ? "null")
+		*/
+
+		var str, stuff;
+
+		"MooPlayer.pr_JSONContents".debug(this);
+
+
+		stuff = contents.collect({|c| c !? { converter.convertToJSON(c.id) } ? "null" }).asList;
+
+		str = super.pr_JSONContents(converter);
+
+		str = str + ",\"contents\":  % ," .format(converter.convertToJSON(stuff)/*stuff.join(", ")*/);
+		str = str + "\"owned\":  % ," .format(converter.convertToJSON(ownedObjects)/*stuff.join(", ")*/);
+		str = str + "\"permission\": %".format(converter.convertToJSON(permissions));
+
+		"ok, we got the MooUSer: %".format(str).debug(this);
+		^str;
 	}
 
 }
