@@ -209,29 +209,36 @@ MooRoot : MooPlayer {
 		me = bool
 	}
 
-	id {
-		^\0
-	}
+	//id {
+	//	^\0
+	//}
 
 	parent_ {|genericPlayer|
 
 		var superID;
 
-		"parent_".debug(this);
+		moo.notNil.if({
+			genericPlayer = genericPlayer ? moo.genericPlayer;
 
-		genericPlayer.notNil.if({
+			"parent_".debug(this);
 
-			genericPlayer.isKindOf(MooObject).if({
-				superID = genericPlayer.id;
-				superObj = genericPlayer;
-			}, {
-				superID = genericPlayer;
-				superObj = moo.at(superID);
+			genericPlayer.notNil.if({
+
+				//	genericPlayer.isKindOf(MooObject).if({
+				//		superID = genericPlayer.id;
+				//		superObj = genericPlayer;
+				//	}, {
+				//		superID = genericPlayer;
+				//		superObj = moo.at(superID);
+				//	});
+				//	this.property_(\parent, superID, false);
+				//});
+
+				this.pr_superObj_(genericPlayer);
+
+				this.pr_copyParentProperties();
 			});
-			this.property_(\parent, superID, false);
 		});
-
-		this.pr_copyParentProperties();
 	}
 
 }

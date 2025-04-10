@@ -1,12 +1,133 @@
 MooObject : NetworkGui  {
 
-	var <moo,  <owner, <id, <aliases, verbs, <location,  <properties, <>immobel,
+	classvar >generic;
+
+	var <moo,  owner, <id, <aliases, verbs, location,  <properties, <>immobel,
 	superObj;
 
+	*generic {|moo|
+		var ret, moo_generics;
+
+		// this method is expensive, especially with the recursion, however, it doesn't get called often
+
+		ret = generic;
+		ret.notNil.if({
+			^ret
+		});
+
+		// search the moo
+		moo.notNil.if({
+
+			ret = moo.generics.values.detect({|item| item.class == this});
+			ret.notNil.if({
+				generic = ret;
+				^ret;
+			});
+
+			moo_generics = moo.generics.values.collect({ |item| this.mooObject(item, moo) });
+			ret = moo_generics.detect({|item| item.class == this});
+
+			ret.notNil.if({
+				generic = ret;
+				^ret;
+			});
+		});
+
+		// try a superclass
+		this.asClass.superclass.findRespondingMethodFor(\generic).notNil.if({
+			^super.generic(moo);
+		})
+		^nil;
+	}
 
 	*new { |moo, name, maker, parent|
 		"MooObject.new".postln;
-		^super.new.initMooObj(moo, name, maker, parent ? moo.genericObject);
+		^super.new.initMooObj(moo, name, maker, parent ? this.generic(moo));
+	}
+
+	*fromJSON{|dict, converter, moo|
+		"fromJSON MooObject".debug(this);
+		^super.new.restore(dict, converter, moo);
+	}
+
+	restore{|dict, converter, imoo |
+
+		var json_id, name, parent, json_owner, owner_id, superID, props, public, key, value, verbs, verb;
+
+		"restore".debug(this);
+
+		moo = imoo ? Moo.default;
+
+		moo.notNil.if({
+
+			super.make_init(moo.api, nil, {});
+
+			aliases = [];
+			verbs = IdentityDictionary();
+			properties = IdentityDictionary();
+			immobel = false;
+
+
+			name = dict.atIgnoreCase("name");
+			id = dict.atIgnoreCase("id");
+			id = moo.add(this, name, this.id);
+
+			// sort out owner
+			json_owner = dict.atIgnoreCase("owner");
+			json_owner.notNil.if({
+				(json_owner.asString != "null").if({
+					owner_id = converter.getIDFromRef(json_owner, moo);
+					owner_id.notNil.if({ json_owner = owner_id });
+					(json_owner.asString.stripWhiteSpace == id.asString.stripWhiteSpace).if({
+						owner = this;
+					});
+				}, {
+					owner = this
+				});
+			}, {
+				owner = this;
+			});
+			owner.isNil.if({ owner = json_owner ? owner_id });
+
+			// sort out parent
+			parent =  this.class.refToObject(dict.atIgnoreCase("parent")) ?
+			{"parent not found".warn; moo.genericObject}.value;
+			this.pr_superObj_(parent);
+
+
+			props = dict.atIgnoreCase("properties");
+			props.do({|prop|
+				// each property is a dictionary
+				public = prop.atIgnoreCase("public");
+				prop.keys.do({|key|
+					(key.asString.compare("public", true) != 0).if({
+						value = prop.atIgnoreCase(key);
+						this.property_(key.asSymbol, value, public, this);
+					});
+				});
+			});
+
+			verbs = dict.atIgnoreCase("verbs");
+			verbs.do({|json_verb|
+				verb = MooVer.fromJSON(json_verb, converter, moo, this);
+				key = verb.verb;
+				this.prValidID(key).not.if({
+					MooError("Verbs must start with a letter and not cotnain special characters").throw;
+				});
+				verbs.put(key, verb);
+			});
+
+			location = this.class.refToObject(dict.atIgnoreCase("location"), converter, moo);
+			aliases = aliases ++ dict.atIgnoreCase("aliases").collect({|a| a.asSymbol });
+			immobel = dict.atIgnoreCase("immobel");
+
+		});
+	}
+
+	restored {
+
+		// call after moo restoration has finished
+
 	}
 
 
@@ -16,10 +137,17 @@ MooObject : NetworkGui  {
 
 		// iff add is flase, this has been caled in a weird way
 
+		"initMooObj imoo * ".format(imoo).debug(this);
+
 
 		moo = imoo ? Moo.default;
 
 		moo.notNil.if({
+
+			// the first one is the generic
+			this.class.generic.isKindOf(this.class).not.if({
+				this.class.generic = this;
+			});
 
 			super.make_init(moo.api, nil, {});
 
@@ -45,7 +173,8 @@ MooObject : NetworkGui  {
 			//super.make_init(moo.api, nil, {});
 
 			"about to do some parent stuff".debug(this);
-
+			this.pr_superObj_(parent);
+			/*
 			parent.notNil.if({
 				parent.isKindOf(MooObject).if({
 					superID = parent.id;
@@ -60,6 +189,7 @@ MooObject : NetworkGui  {
 
 				this.property_(\parent, superID, false, maker);
 			});
+			*/
 
 			//playableEnv = NetworkGui.make(moo.api);
 			//playableEnv.know = true;
@@ -75,14 +205,14 @@ MooObject : NetworkGui  {
 			id = (str.copyRange(str.size - 2.rrand(8),str.size-1) ++ Date.getDate.rawSeconds.asString)
 			.select({|d|
 				d.isDecDigit;
-			}).asString.asSymbol;
+			}).asString.copyRange(0, 17).asSymbol;
 			//(superID.asString ++ this.identityHash.asString).asSymbol;
 			id = moo.add(this, iname, this.id);
 			name = iname ? id.asString;
 
 			name.debug(this);
 
-			this.property_(\name, name, true, maker).action_(this, {|v| this.name = v.value });//.value.postln;
+			this.property_(\name, name, true, maker);//.action_(this, {|v| this.name = v.value });//.value.postln;
 
 			this.property(\description).isNil.if({
 				this.property_(\description, "You see nothing special.", true, maker);
@@ -128,6 +258,106 @@ MooObject : NetworkGui  {
 	}
 
 
+	pr_superObj_{|parent|
+		var superID;
+
+		//	genericPlayer.isKindOf(MooObject).if({
+		//		superID = genericPlayer.id;
+		//		superObj = genericPlayer;
+		//	}, {
+		//		superID = genericPlayer;
+		//		superObj = moo.at(superID);
+		//	});
+		//	this.property_(\parent, superID, false);
+		//});
+
+
+		parent.notNil.if({
+			parent.isKindOf(MooObject).if({
+				superID = parent.id;
+				superObj = parent;
+			}, {
+				superID = parent;
+				//superID.isKindOf(SimpleNumber).if({
+				(superID.isKindOf(String) || superID.isKindOf(Symbol)).if({
+					superObj = moo.at(superID.asSymbol);
+					superObj.isNil.if({ superObj = superID; });
+				});
+			});
+
+			this.property_(\parent, superID, false, owner);
+		});
+	}
+
+	// obj could be a moo object or an ID string and we don't know which
+	*mooObject{|obj, moo|
+		var relevantID;
+
+		obj.isNil.if({
+			^nil
+		});
+
+		obj.isKindOf(MooObject).if({
+			^obj
+		});
+		relevantID = obj;
+		obj = moo.at(relevantID.asSymbol);
+		obj.notNil.if({
+			^obj
+		});
+		obj = relevantID;
+		^obj;
+	}
+
+	*refToObject{|obj, converter, moo|
+		var id, json_obj;
+		//owner =  dict.atIgnoreCase("owner");
+		obj.isNil.if({
+			^nil
+		});
+
+		id = converter.getIDFromRef(obj);
+		id.notNil.if({
+			obj = moo.at(id);
+		}, {
+			//json_obj = moo.at(obj);
+			//json_obj.notNil.if({
+			//	obj = json_obj;
+			//});
+			obj = this.mooObject(obj, moo);
+		});
+		^obj;
+	}
+
+	// obj could be a moo object or an ID string and we don't know which
+	*id{|obj|
+		obj.isKindOf(MooObject).if({
+			^obj.id;
+		});
+		(obj.isKindOf(String) || obj.isKindOf(Symbol)).not.if({
+			obj = obj.asString;
+		});
+		^obj.asSymbol;
+	}
+
+	// this very dodgy method sorts out circular dependancies
+	pr_resolve{|obj|
+		^this.class.mooObject(obj, moo);
+	}
+
+	pr_superObj {
+		^this.pr_resolve(superObj);
+	}
+
+	owner{
+		^this.pr_resolve(owner)
+	}
+
+	location{
+		^this.pr_resolve(location)
+	}
+
+
 	formatKey{|key|
 
 		^"%/%".format(key, id).asSymbol;
@@ -135,20 +365,24 @@ MooObject : NetworkGui  {
 
 	pr_copyParentProperties{
 
-		var public;
-
+		var public, superObject;
 
 		superObj.notNil.if({
-			// copy the parent's properties
-			superObj.properties.keys.do({|key|
-				this.properties[key].isNil.if({
-					// is it public?
-					public = superObj.isPublic(key);
-					this.property_(key, superObj.property(key).value, public);
+
+			superObject = this.pr_superObj;
+
+			//superObj.notNil.if({
+			superObject.isKindOf(MooObject).if({
+				// copy the parent's properties
+				superObject.properties.keys.do({|key|
+					this.properties[key].isNil.if({
+						// is it public?
+						public = superObject.isPublic(key);
+						this.property_(key, superObject.property(key).value, public);
+					});
 				});
 			});
 		});
-
 
 	}
 
@@ -166,6 +400,11 @@ MooObject : NetworkGui  {
 
 			// starts with a number
 			key[0].isAlpha.not.if({ valid = false; });
+
+				// reserved word
+				(key.compare("public", true) == 0).if({
+					valid = false;
+				});
 		} , {
 			// whatever else is happening here is weird and I don't like it
 			valid = false;
@@ -244,14 +483,15 @@ MooObject : NetworkGui  {
 	}
 
 	property {|key|
-		var value;
+		var value, superObj;
 
 		key = key.asSymbol;
 
 		value = properties.at(key);
 
 		value.isNil.if({
-			superObj.notNil.if({
+			superObj = this.pr_superObj;
+			superObj.isKindOf(MooObject).if({
 				value = superObj.property(key);
 			});
 		});
@@ -286,11 +526,12 @@ MooObject : NetworkGui  {
 
 	getVerb {|key|
 
-		var verb = verbs.at(key.asSymbol);
+		var superObj, verb = verbs.at(key.asSymbol);
 
 
 		verb.isNil.if({
-			superObj.notNil.if({
+			superObj = this.pr_superObj;
+			superObj.isKindOf(MooObject).if({
 				verb = superObj.getVerb(key);
 			})
 		});
@@ -437,12 +678,21 @@ MooObject : NetworkGui  {
 
 	pr_JSONContents {|converter|
 
-		var str="", synths ="", props = //properties.collect({|p| converter.convertToJSON(p) });
-		properties.keys.collect({|k|
-			"{ \"%\" : % }".format(k, converter.convertToJSON(properties[k]));
+		var public, str="", synths ="", props, json_verbs; //properties.collect({|p| converter.convertToJSON(p) });
+
+
+
+		props = properties.keys.collect({|key|
+			public = this.isPublic(key);
+			"{ \"%\" : %, \"public\" : % }".format(key, converter.convertToJSON(properties[key]), public);
 		}).asList;
 
 		//"MooObject.prJSONCONTENTS".debug(this);
+
+		json_verbs = verbs.keys.collect({|key|
+			converter.convertToJSON(verbs.at(key))
+		}).asList;
+
 
 
 		synthDefs.notNil.if({
@@ -455,8 +705,9 @@ MooObject : NetworkGui  {
 
 		str = "\"id\" : \"%\", ".format(this.id.asString);
 		str = str + "\"class\" : \"%\",".format(this.class);
-		str = str + "\"verbs\" : %,".format(converter.convertToJSON(verbs));
-		str = str + "\"properties\" : [ % ],".format(converter.convertToJSON(props)) ;
+		str = str + "\"name\" : \"%\", ".format(this.name);
+		str = str + "\"verbs\" : [ % ],".format(json_verbs.join(", "));
+		str = str + "\"properties\" : [ % ],".format(props.join(", ")); //format(converter.convertToJSON(props)) ;
 		str = str + "\"aliases\" : %,".format(converter.convertToJSON(aliases)) ;
 		str = str + "\"location\" : %,".format(location !? { converter.convertToJSON(location.id) } ? "null") ;
 		str = str + "\"immobel\" : %,".format(immobel.asCompileString) ;
@@ -469,6 +720,9 @@ MooObject : NetworkGui  {
 
 
 	}
+
+
+
 }
 
 
@@ -609,23 +863,159 @@ MooStage : MooObject {
 	}
 }
 
+MooContainer : MooObject {
 
-
-MooRoom : MooObject {
-
-	var <contents, <players, <exits, semaphore;
+	var <contents, semaphore;
 
 	*new { |moo, name, maker, parent|
 
-		^super.new(moo, name, maker, parent ? moo.genericRoom ? moo.genericObject).initRoom();
+		^super.new(moo, name, maker, parent ? this.generic(moo)).initContainer();
 	}
+
+	*fromJSON{|dict, converter, moo|
+		"fromJSON MooContainer".debug(this);
+		^super.fromJSON(dict, converter, moo).containerRestore(dict, converter, moo);
+	}
+
+
+	initContainer{
+
+		semaphore = Semaphore(1);
+		contents = [];
+		immobel = superObj.immobel;
+	}
+
+	remove {|item|
+
+		semaphore.wait;
+		contents.remove(item);
+		//playableEnv.remove(item);
+		this.remove(item);
+		semaphore.signal
+
+	}
+
+	addObject {|item|
+
+		semaphore.wait;
+		contents = contents.add(item);
+		//playableEnv.put(item.name.asSymbol, item);
+		this.put(item.name.asSymbol, item);
+		semaphore.signal
+
+	}
+
+	findObj {|key|
+
+		key = key.asSymbol;
+		//var found;
+
+		//contents.do({|obj|
+
+		//	obj.matches(key).if({
+
+		//		found = obj;
+		//	})
+		//});
+
+		//^found;
+		^contents.detect({|obj| obj.matches(key) });
+	}
+
+	doesNotUnderstand { arg selector ... args;
+		var found;
+
+		selector = selector.asSymbol;
+
+		found = super.doesNotUnderstand(selector, *args);
+
+		found.isNil.if({
+			found = this.findObj(selector);
+			found.isNil.if({
+				found = this[selector];//playableEnv[selector];
+			});
+		});
+
+		^found;
+	}
+
+	pr_JSONContents {|converter|
+
+		var stuff;
+
+
+		stuff = contents.collect({|c| c !? { c.id } ? "null" });
+
+		^super.pr_JSONContents(converter) +
+		",\"contents\":  % ," .format(converter.convertToJSON(stuff));
+	}
+
+	containerRestore{ |dict, converter, moo|
+
+		var json_contents;
+
+		semaphore = Semaphore(1);
+		contents = [];
+
+
+		json_contents = dict.atIgnoreCase("properties");
+		contents = contents ++ json_contents.collect({|item| this.refToObject(item, converter, moo) });
+	}
+
+
+	restored {
+
+		semaphore.wait;
+		contents.do({|item|
+			this.put(item.name.asSymbol, item);
+		});
+		semaphore.signal
+
+	}
+
+
+
+}
+
+MooRoom : MooContainer {
+
+	var<players, <exits;
+
+	*new { |moo, name, maker, parent|
+
+		^super.new(moo, name, maker, parent ? this.generic(moo)).initRoom();
+	}
+
+	*fromJSON{|dict, converter, moo|
+		"fromJSON MooRoom".debug(this);
+		^super.fromJSON(dict, converter, moo).roomRestore(dict, converter, moo);
+	}
+
+	roomRestore{ |dict, converter, moo|
+
+		var json_exits, key, value;
+
+		//semaphore = Semaphore(1);
+		players = [];
+		//contents = [];
+		exits = IdentityDictionary();
+
+		//departures = exits.keysValuesDo({|key, val| "{ \"key\": \"%\", \"val\": %}".format(key, val !? {val.id} ? "null") }).asList;
+
+		json_exits = dict.atInoreCase("exits");
+		json_exits.do({|item|
+			key = item.atIgnoreCase("key");
+			value = item.atIgnoreCase("val");
+			value = MooObject.refToObject(value, converter, moo);
+			exits.put(key.asSymbol, value);
+		});
+	}
+
 
 	initRoom {
 
 		//super.initMooObj(true, moo, name, maker);
-		semaphore = Semaphore(1);
 		players = [];
-		contents = [];
 		aliases = ["here"];
 		exits = IdentityDictionary();
 		immobel = true;
@@ -716,25 +1106,6 @@ MooRoom : MooObject {
 	}
 
 
-	remove {|item|
-
-		semaphore.wait;
-		contents.remove(item);
-		//playableEnv.remove(item);
-		this.remove(item);
-		semaphore.signal
-
-	}
-
-	addObject {|item|
-
-		semaphore.wait;
-		contents = contents.add(item);
-		//playableEnv.put(item.name.asSymbol, item);
-		this.put(item.name.asSymbol, item);
-		semaphore.signal
-
-	}
 
 	removePlayer {|player|
 		semaphore.wait;
@@ -753,7 +1124,7 @@ MooRoom : MooObject {
 	}
 
 	exit{|key|
-		^exits[\key]
+		^MooObject.mooObject(exits[\key] , moo);
 	}
 
 	addExit{|key, room|
@@ -763,9 +1134,9 @@ MooRoom : MooObject {
 
 	findObj {|key|
 
-		var found, search;
+		var found;//, search;
 		key = key.asSymbol;
-
+		/*
 		search = {|arr|
 
 			arr.do({|obj|
@@ -786,6 +1157,14 @@ MooRoom : MooObject {
 		});
 
 		^found;
+		*/
+
+		found = super.findObj(key);
+		found.isNil.if({
+			found = players.detect({|obj| obj.matches(key) });
+		});
+		^found;
+
 	}
 
 	env {
@@ -794,25 +1173,8 @@ MooRoom : MooObject {
 	}
 
 
-	doesNotUnderstand { arg selector ... args;
-		var found;
-
-		selector = selector.asSymbol;
-
-		found = super.doesNotUnderstand(selector, *args);
-
-		found.isNil.if({
-			found = this.findObj(selector);
-			found.isNil.if({
-				found = this[selector];//playableEnv[selector];
-			});
-		});
-
-		^found;
-	}
-
 	remoteDesc { arg user;
-
+		// ??
 
 	}
 
@@ -834,36 +1196,15 @@ MooRoom : MooObject {
 
 		//"exits %".format(exits.keys).debug(this);
 
-		stuff = contents.collect({|c| c !? { c.id } ? "null" });
-		departures = exits.keysValuesDo({|key, val| "{ \"key\": \"%\", \"val\": %}".format(key, val !? {val.id} ? "null") }).asList;
+		//stuff = contents.collect({|c| c !? { c.id } ? "null" });
+		departures = exits.keysValuesDo({|key, val| "{ \"key\": \"%\", \"val\": %}".format(key, val !? {val.id} ? "null") }).asList.join(", ");
 
 		^super.pr_JSONContents(converter) +
-		",\"contents\":  % ," .format(converter.convertToJSON(stuff)/*stuff.join(", ")*/) +
-		"\"exits\":  % ".format(converter.convertToJSON(departures)/*departures.join(",\n")*/);
+		//",\"contents\":  % ," .format(converter.convertToJSON(stuff)/*stuff.join(", ")*/) +
+		"\"exits\": [ % ]".format(departures);//.format(converter.convertToJSON(departures)/*departures.join(",\n")*/);
 	}
 
 
 
-	/*
-	toJSON{
 
-	var encoder, props, stuff, departures;
-
-	encoder = MooCustomEncoder();
-
-	props = properties.collect({|p| JSONConverter.convertToJSON(p, encoder) });
-	stuff = contents.collect({|c| c !? { c.id } ? "null" });
-	departures = exits.keysValuesDo({|key, val| "{ \"key\": \"%\", \"val\": %}".format(key, val !? {val.id} ? "null") });
-
-	^ "{ \"id\": %, ".format(id.asCompileString) +
-	"\"verbs\": %,".format(JSONConverter.convertToJSON(verbs)) +
-	"\"properties\": [ % ],".format(props.join(",\n")) +
-	"\"aliases\": %,".format(JSONConverter.convertToJSON(aliases)) +
-	"\"location\": %,".format(location !? { location.id } ? "null") +
-	"\"immobel\": %,".format(immobel.asCompileString) +
-	"\"contents\": [ % ]," .format(stuff.join(", ")) +
-	"\"exits\": [ % ]".format(departures.join(",\n")) +
-	"\"owner\": % }".format(owner !? {owner.id} ? "null")
-	}
-	*/
 }

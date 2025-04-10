@@ -18,10 +18,34 @@ MooParser {
 		var result;
 		result = reservedWords.at(key.asSymbol);
 		result.isNil.if({
-			result.atIgnoreCase(key);
+			reservedWords.atIgnoreCase(key);
 		});
 
 		^result;
+	}
+
+	*toJSON{|converter|
+		^converter.convertToJSON(reservedWords);
+	}
+
+	*fromJSON{|converter, moo, dict|
+
+		dict.keys.do({|key|
+			reserveWord(key.asSymbol, converter.restoreMoo(dict.at(key)));
+		});
+	}
+
+
+	toJSON{|converter|
+		^this.class.toJSON(converter);
+	}
+
+	reserveWord{|key, object|
+		^this.class.reserveWord(key, object);
+	}
+
+	reservedWord{|key|
+		^this.class.reservedWord(key);
 	}
 
 
@@ -76,6 +100,7 @@ MooParser {
 		(verb.asString.toLower.asSymbol == \make).if({
 			matched = true;
 
+
 			switch(dobj.toLower.asSymbol,
 				\room, {
 					thing = MooRoom(actor.moo, iobj, actor);
@@ -111,13 +136,13 @@ MooParser {
 					// not a number. Make a new room and connect it
 					thing = MooRoom(actor.moo, iobj, actor);
 					actor.post("New room % is object number %".format(thing.name, thing.id));
-                });
+				});
 
-                actor.location.addExit(dobj, thing);
-                actor.post("New exit % to %".format(dobj.name, thing.name));
-			    matched = true;
-		     });
-});
+				actor.location.addExit(dobj, thing);
+				actor.post("New exit % to %".format(dobj.name, thing.name));
+				matched = true;
+			});
+		});
 
 
 
@@ -172,14 +197,14 @@ MooParser {
 					d_obj = actor.location;
 
 				},{
-						i_obj.isNil.if({
-							i_obj = actor.location
-						});
+					i_obj.isNil.if({
+						i_obj = actor.location
+					});
 				});
 			});
 		});
 
-			// is it on the caller?
+		// is it on the caller?
 		vfunc.isNil.if({
 			vfunc = this.checkObj(actor);
 			vfunc.notNil.if({
@@ -352,24 +377,24 @@ MooParser {
 
 	matchObj {| key, item|
 
-		var found = false;
+	var found = false;
 
-		(item.name.asSymbol == key).if ({
+	(item.name.asSymbol == key).if ({
 
-			found = true;  //found!
+	found = true;  //found!
 
-		}, {
+	}, {
 
-			item.aliases.do({|alias|
+	item.aliases.do({|alias|
 
-				(alias.asSymbol == key).if ({
+	(alias.asSymbol == key).if ({
 
-					found = true;
-				});
-			});
-		});
+	found = true;
+	});
+	});
+	});
 
-		^found;
+	^found;
 	}
 	*/
 
@@ -426,7 +451,7 @@ MooParser {
 		found.not.if ({
 			//actor.location.contents.do({|item|
 
-				//found = matchObj(key, item);
+			//found = matchObj(key, item);
 			//	found = item.matches(key);
 			//	obj = item;
 			//});
@@ -447,8 +472,8 @@ MooParser {
 
 MooVerb{
 
-	classvar <disallowed;
-	var verb, <dobj, <iobj, funcstr, <obj, func, owner;
+	classvar <disallowed, <reserved;
+	var verb, <dobj, <iobj, funcstr, <obj, func, owner, <published;
 
 	*initClass {
 
@@ -468,7 +493,37 @@ MooVerb{
 			"openHTMLFile", "openServer", "revealInFinder", "perform", "performList",
 			"performMsg", "performWithEnvir", "performKeyValuePairs", "tryPerform",
 			"superPerform", "superPerformList", "multiChannelPerform"
-		]
+		];
+
+		reserved = ["public"];
+	}
+
+	*validID {|key|
+		var naughty_count = 0, valid = true;
+
+		key.isKindOf(Symbol).if({ key = key.asString });
+
+		key.isKindOf(String).if({
+			valid = MooVerb.pass(key);
+
+			// weird chars
+			naughty_count = key.sum({|char| (char.isAlphaNum).if({ 0 } , { 1 }) });
+			(naughty_count > 0).if({ valid = false });
+
+			// starts with a number
+			key[0].isAlpha.not.if({ valid = false; });
+
+			reserved.do({|naughty|
+				(key.compare(naughty, true) == 0).if({
+					valid = false;
+				});
+			});
+		} , {
+			// whatever else is happening here is weird and I don't like it
+			valid = false;
+		});
+
+		^valid;
 	}
 
 
@@ -484,16 +539,48 @@ MooVerb{
 		^pass;
 	}
 
+	*fromJson{|dict, converter, moo, object|
 
+		var verb, dobj, iobj, func, obj, publish, owner, json_obj, id;
+		//"{ \"verb\": \"%\", ".format(verb) +
+		//"\"args\": [\"%\", \"%\"],".format(dobj, iobj) +
+		//"\"func\": %, ".format(converter.convertToJSON(func)) +
+		//"\"published\": %, ".format(converter.convertToJSON(published)) +
+		//"\"owner\": % }" .format(converter.convertToJSON(owner));
 
-	*new {|verb, dobj, iobj, func, obj, publish, owner|
+		verb = dict.atIgnoreCase("verb");
+		dobj = dict.atIgnoreCase("dobj");
+		iobj = dict.atIgnoreCase("iobj");
+		func = dict.atIgnoreCase("func");
+		publish = dict.atIgnoreCase("published");
 
-		^super.newCopyArgs(verb, dobj, iobj, func, obj, owner).init(publish);
+		obj =  dict.atIgnoreCase("obj");
+		obj = MooObject.refToObject(obj);
+
+		owner =  dict.atIgnoreCase("owner");
+		owner = MooObject.refToObject(owner);
+
+		^this.new(verb.asSymbol, dobj.asSymbol, iobj.asSymbol, object, publish, owner, moo);
 	}
 
-	init{ arg publish = false;
+	*new {|verb, dobj, iobj, func, obj, publish, owner, moo|
+
+		this.validID(verb).if({
+			^super.newCopyArgs(verb, dobj, iobj, func, obj, owner).init(publish, moo);
+		} , {
+			MooError("Badly formed verb name").throw;
+		});
+
+	}
+
+	init{ arg publish = false, moo;
+
+		var name, id = MooObject.id(obj);
 
 		owner = owner ? obj.owner;
+		moo = moo ? obj.moo;
+		obj.isKindOf(MooObject).if({ name = obj.name }, { name = id });
+
 
 		funcstr.isKindOf(String).not.if({
 			funcstr = funcstr.asCompileString;
@@ -506,12 +593,13 @@ MooVerb{
 		{ funcstr.compile }.try({|err| MooCompileError(err.errorString).throw});
 
 		func = SharedResource(funcstr);
-		func.mountAPI(obj.moo.api, "verb/%/%".format(obj.id, verb).asSymbol, "% verb %".format(obj.name, verb));
+		func.mountAPI(moo.api, "verb/%/%".format(id, verb).asSymbol, "% verb %".format(name, verb));
 
 
 		publish.if({
-			this.publish;
-		})
+			this.publish(moo, id, name);
+		});
+		published = publish;
 	}
 
 	pass {|str|
@@ -535,9 +623,13 @@ MooVerb{
 		^bad_words;
 	}
 
-	publish {
+	publish {|moo, id, name|
 		// add to the api
-			obj.moo.api.add("%/%".format(verb, obj.id).asSymbol, {arg dob, iob; this.invoke(dob, iob)},
+		id = id ? MooObject.id(obj);
+		moo = moo ? obj.moo;
+		name = name ?  obj.isKindOf(MooObject).if({ name = obj.name }, { name = id });
+
+		moo.api.add("%/%".format(verb, id).asSymbol, {arg dob, iob; this.invoke(dob, iob)},
 			"% % % % on %".format(verb, dobj, iobj, obj.name));
 	}
 
@@ -546,9 +638,12 @@ MooVerb{
 		^ "{ \"verb\": \"%\", ".format(verb) +
 		"\"args\": [\"%\", \"%\"],".format(dobj, iobj) +
 		"\"func\": %, ".format(converter.convertToJSON(func)) +
+		"\"obj\" : %, ".format(converter.convertToJSON(obj)) +
+		"\"published\": %, ".format(converter.convertToJSON(published)) +
 		"\"owner\": % }" .format(converter.convertToJSON(owner));
 
 	}
+
 
 	verb {
 

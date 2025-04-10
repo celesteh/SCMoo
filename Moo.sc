@@ -1,6 +1,6 @@
 Moo {
 	classvar <>default;
-	var index, objects, users, <api, <semaphore, <pronouns, <host, <>lobby, <me, <genericObject, <genericRoom, <genericPlayer;
+	var index, objects, users, <api, <semaphore, <pronouns, <host, <>lobby, <me, <generics;
 
 	*new{|netAPI, json|
 		^super.new.load(netAPI, json)
@@ -98,11 +98,12 @@ Moo {
 		objects = IdentityDictionary();//[];
 		index = 0;
 		users = IdentityDictionary();
+		generics = IdentityDictionary();
 
 		host = true;
 
 		json.notNil.if({
-			this.fromJSON(json, nil, loadType);
+			this.fromJSON(json, nil, nil, loadType);
 		});
 
 		((objects.size == 0) || (json.isNil)).if({
@@ -114,25 +115,29 @@ Moo {
 
 			//hack = this;
 
+			//ok, the roo ID is always \0
+
 			//MooObject(this, "dummy");
 			"make root".debug(this);
 			root = MooRoot(this, "Root");
 			"made root".debug(this);
 
-			genericObject = MooObject(this, "object", root, -1);
-			MooParser.reserveWord(\object, genericObject);
+			generics[\object] = MooObject(this, "object", root, -1);
+			//MooParser.reserveWord(\object, genericObject);
 
 
 			"make a generic player".debug(this);
-			genericPlayer = MooPlayer(this, "player", nil);
-			"made generic player, %".format(genericPlayer.name).debug(this);
-			genericPlayer.dump;
-			root.parent = genericPlayer;
-			MooParser.reserveWord(\player, genericPlayer);
+			generics[\player] = MooPlayer(this, "player", nil);
+			"made generic player, %".format(generics[\player].name).debug(this);
+			//genericPlayer.dump;
+			root.parent = generics[\player];
+			//MooParser.reserveWord(\player, genericPlayer);
 
-			genericRoom = MooRoom(this, "room", root, genericObject);
-			genericRoom.description_("An unremarkable place.");
-			genericRoom.verb_(\look, \this, \none,
+			generics[\container] = MooContainer(this, "bag", root, generics[\object]);
+
+			generics[\room] = MooRoom(this, "room", root, generics[\container]);
+			generics[\room].description_("An unremarkable place.");
+			generics[\room].verb_(\look, \this, \none,
 
 				{|dobj, iobj, caller, object|
 					var stuff, others, last, exits;
@@ -141,17 +146,17 @@ Moo {
 					(object == caller.location).if({
 						stuff = object.contents;
 						(stuff.size > 0).if({
-							stuff = stuff.collect({|o| o.name });
+							stuff = stuff.collect({|o| Moo.refToObject(o).name });
 							stuff = stuff.join(", ");
 							caller.postUser("You see:" + stuff);
 						});
 						others = object.players.select({|player| player != caller });
 						(others.size == 1).if({
-							caller.postUser(others[0].name.asString + "is here.");
+							caller.postUser(Moo.refToObject(others[0]).name.asString + "is here.");
 						}, {
 							(others.size > 1).if({
-								last = others.pop;
-								others = others.collect({|o| o.name });
+								last = Moo.refToObject(others.pop);
+								others = others.collect({|o|  Moo.refToObject(o).name  });
 								others = others.join(", ");
 								caller.postUser(others ++", and" + last.name + "are here.");
 							});
@@ -172,9 +177,9 @@ Moo {
 				}.asCompileString;
 
 			);
-			MooParser.reserveWord(\room, genericRoom);
+			//MooParser.reserveWord(\room, genericRoom);
 
-			lobby = MooRoom(this, "Lobby", root, genericRoom);
+			lobby = MooRoom(this, "Lobby", root, generics[\room]);
 			me = root;
 
 
@@ -215,13 +220,21 @@ Moo {
 
 		semaphore.wait;
 
-		should_add = objects.includes(obj).not;
-		obj.isKindOf(MooPlayer).if({
-			name = name ? obj.name;
-			name = name.asSymbol;
-			should_add = users[name].isNil;
-		});
+		obj.isKindOf(MooRoot).if({
+			id = \0;
+			should_add = objects.at(id).isNil;
+			should_add.not.if({
+				MooDuplicateError("You already have a Root").throw;
+			});
+		} , {
 
+			should_add = objects.includes(obj).not;
+			obj.isKindOf(MooPlayer).if({
+				name = name ? obj.name;
+				name = name.asSymbol;
+				should_add = users[name].isNil;
+			});
+		});
 
 
 		/*
@@ -295,8 +308,44 @@ Moo {
 
 	at {|ind|
 
+		(index.isKindOf(String) || index.isKindOf(Symbol)).not.if({
+			index = index.asString;
+		});
+		index = index.asSymbol;
+
 		^objects.at(ind);
 	}
+
+	genericObject {
+		var obj = generics[\object];
+		obj.notNil.if({
+			obj.isKindOf(MooObject).not.if({
+				obj = this.at(obj);
+			});
+		});
+		^obj
+	}
+
+	genericRoom {
+		var obj = generics[\room];
+		obj.notNil.if({
+			obj.isKindOf(MooObject).not.if({
+				obj = this.at(obj);
+			});
+		});
+		^obj
+	}
+
+	genericPlayer {
+		var obj = generics[\player];
+		obj.notNil.if({
+			obj.isKindOf(MooObject).not.if({
+				obj = this.at(obj);
+			});
+		});
+		^obj
+	}
+
 
 
 	find{|name|
@@ -387,7 +436,7 @@ Moo {
 
 	toJSON{|converter|
 
-		var encoder, synths;
+		var encoder, synths, json_generics, reserved, obs;
 
 		converter.isNil.if({
 			encoder = MooCustomEncoder();
@@ -396,50 +445,112 @@ Moo {
 		});
 
 		synths = "\"SynthDefs\" : % ".format(converter.convertToJSON(api.synthDefs));
+		//generics = "\"Generics\" : { \"Object\": % , \"Player\": %, \"Room\": % }".format(
+		//	converter.convertToJSON(genericObject),
+		//	converter.convertToJSON(genericPlayer),
+		//	converter.convertToJSON(genericRoom)
+		//);
+		json_generics =  generics.keys.collect({|key|
+			"{ \"key\" : \"%\" ,  \"object\": % }".format(key, converter.convertToJSON(generics.at(key)));
+		}).asList.join(", ");
+		json_generics = "\"Generics\" : [ % ]".format(json_generics);
 
-		^"{\n\"class\": \"Moo\",\n%,\n\"Objects\": %\n}\n".format(synths, converter.convertTree(objects, this));
+		reserved = "\"Reserved\": % ".format(converter.convertToJSON(MooParser));
 
+		obs = "\"Objects\": % ".format(converter.convertTree(objects, this));
 
+		^"{\n\"class\": \"Moo\",\n%,\n%,\n%,\n%\n}\n".format(
+			obs,
+			synths,
+			json_generics,
+			reserved
+		);
 	}
 
 
-	fromJSON{|obj, converter, loadType=\parseFile|
+	// jsonClass.fromJSON(input, converter, moo);
+	fromJSON{|obj, converter, linkToThis, loadType=\parseFile|
 
-		var encoder, objects;
+		var decoder, objs, json_generics, ref, reserved, key, value;
 
+		loadType = loadType ? \parseFile;
 
-		converter.isNil.if({
-			encoder = MooCustomDecoder();
+		"fromJSON % converter % %".format(loadType, converter, obj).debug(this);
+
+		obj.isKindOf(String).if({
+			"its' a string".debug(this);
+			decoder = MooCustomDecoder();
 			{
-				^MooJSONConverter.perform(loadType, obj, encoder);
+				^MooJSONConverter.perform(loadType, obj, decoder, false, true, this);
 			}.try ({
-				^MooJSONConverter.convertToSC( obj, encoder);
+				^MooJSONConverter.convertToSC( obj, decoder, false, true, this);
 			});
 		});
 
-		obj.isKindof(String).if({
-			{
-				^MooJSONConverter.perform(loadType, obj, encoder);
-			}.try ({
-				^MooJSONConverter.convertToSC( obj, encoder);
-			});
-		});
+		"fromJSON not recursing".format(obj).debug(this);
 
 		semaphore.wait;
 
 		obj.isKindOf(Dictionary).if({
-			objects = obj.atIgnoreCase("Objects");
-			objects = converter.restoreMoo(objects, this);
-			objects = objects.sort({|a, b|
-				a.atIgnoreCase("index").asInteger < b.atIgnoreCase("index").asInteger
+
+			converter.isNil.if({
+				decoder = MooCustomDecoder();
+				converter = MooJSONConverter(true, false, nil, decoder).moo_(this);
 			});
-			objects = Array(objects.last.atIgnoreCase("index").asInteger+1);  // allocate the right size array
+
+			// First grab all the objects
+
+			objs = obj.atIgnoreCase("Objects");
+			objs = converter.restoreMoo(objects, this);
+			//objects = objects.sort({|a, b|
+			//	a.atIgnoreCase("index").asInteger < b.atIgnoreCase("index").asInteger
+			//});
+			//objects = Array(objects.last.atIgnoreCase("index").asInteger+1);  // allocate the right size array
 
 			// put everything back at the right index
-			objects.do({|o|
-				objects[o.atIgnoreCase("index").asInteger] = o;
+			//objects.do({|o|
+			//	objects[o.atIgnoreCase("index").asInteger] = o;
+			//});
+			objs.do({|o|
+				objects.put(o.id.asSymbol, o);
 			});
 
+			// Then get the generics
+			json_generics =  obj.atIgnoreCase("Generics");
+			//ref = generics.atIgnoreCase("Object");
+			//ref.notNil.if({
+			//	genericObject = objects.at(ref.atIgnoreCase("id").asSymbol);
+			//});
+			//ref = generics.atIgnoreCase("Player");
+			//ref.notNil.if({
+			//	genericPlayer = objects.at(ref.atIgnoreCase("id").asSymbol);
+			//});
+			//ref = generics.atIgnoreCase("Room");
+			//ref.notNil.if({
+			//	genericRoom = objects.at(ref.atIgnoreCase("id").asSymbol);
+			//});
+			json_generics.do({|item|
+				key = item.atIgnoreCase("key");
+				value = item.atIgnoreCase("object");
+				value = MooObject.refToObject(value, converter, this);
+				generics.put(key.asSymbol, value);
+				// fix the generic problem
+				value.isKindOf(MooObject).if({
+					(value.class.generic.isKindOf(value.class)).not.if({
+						value.class.generic = value;
+					});
+				});
+			});
+
+
+			// anything we've shoved in the parser.
+			reserved = obj.atIgnoreCase("Reserved");
+			MooParser.fromJSON(converter, this, reserved);
+
+			// finally, the synthdefs, which idk
+
+
+			converter.finish;
 
 		});
 

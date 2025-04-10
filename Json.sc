@@ -24,9 +24,15 @@ MooCustomDecoder {
 		^super.newCopyArgs()
 	}
 
-	value {|str, converter, class, moo|
+	value {|input, converter, class, moo|
 
-		"running the decoder".debug(this);
+		var jsonClass;
+
+		input.isNil.if({
+			Error("No Input!!").throw;
+		});
+
+		"running the decoder, converter is %, input is %, which is a %,  class is % moo is %".format(converter, input,input.class, class, moo).debug(this);
 		/*
 		item.notNil.if({
 			item.respondsTo(\fromJSON).if({
@@ -36,16 +42,33 @@ MooCustomDecoder {
 		});
 		^nil
 		*/
-		class.asSymbol.asClass.findRespondingMethodFor(\fromJSON).notNil.if({
-			^class.asSymbol.asClass.fromJSON(str, converter, moo);
+
+		input.isKindOf(Dictionary).if({
+			input.atIgnoreCase("class").postln;
+			class = class ? input.atIgnoreCase("class");
+			"class is %, a kind of %".format(class, class.class).debug(this);
+
 		});
+
+		//obj, converter, loadType=\parseFile
+		class.notNil.if({
+			jsonClass = class.asSymbol.asClass;
+
+			jsonClass.findRespondingMethodFor(\fromJSON).notNil.if({
+				"Send it to the class % with converter %".format(class, converter).debug(this);
+				^jsonClass.fromJSON(input, converter, moo);
+			});
+
+		});
+
+		^nil;
 
 	}
 }
 
 MooJSONConverter : JSONlib {
 
-	var queue, done, inTree;
+	var queue, done, inTree, >moo, converted;
 
 
 	*new { |postWarnings = true, useEvent=true, customEncoder=nil, customDecoder=nil|
@@ -63,7 +86,7 @@ MooJSONConverter : JSONlib {
 		^super.new.init(postWarnings, customEncoder: customEncoder).prConvertTree(object)
 	}
 
-	*convertToSC {|json, customDecoder=nil, useEvent=false, postWarnings=true|
+	*convertToSC {|json, customDecoder=nil, useEvent=false, postWarnings=true, moo|
 		var converter, raw;
 		if(json.isKindOf(Symbol)) {
 			json = json.asString;
@@ -77,21 +100,26 @@ MooJSONConverter : JSONlib {
 			postWarnings,
 			customDecoder: customDecoder,
 			useEvent: useEvent
-		);
+		).moo_(moo);
+
+		"convertToSC".debug(converter);
 		raw = converter.prConvertToSC(json.parseJSON);
 		^converter.restoreMoo(raw);
 	}
 
 
-	*parseFile {|filePath, customDecoder=nil, useEvent=true, postWarnings=true|
+	//filePath, customDecoder=nil, useEvent=true, postWarnings=true, moo
+	*parseFile {|filePath, customDecoder=nil, useEvent=true, postWarnings=true, moo|
 		var converter, raw;
 				customDecoder = customDecoder ? MooCustomDecoder();
 		converter = this.new(
 			postWarnings,
 			customDecoder: customDecoder,
 			useEvent: useEvent
-		);
+		).moo_(moo);
+		"parseFile".debug(converter);
 		raw = converter.prConvertToSC(filePath.parseJSONFile);
+		"parseFile raw %".format(raw).debug(converter);
 		^converter.restoreMoo(raw);
 	}
 
@@ -106,10 +134,12 @@ MooJSONConverter : JSONlib {
 
 		queue = [];
 		done = [];
+		converted = [];
 		inTree = false;
 
 		//"init".debug(this);
 	}
+
 
 	convertToJSON{|object|
 
@@ -171,6 +201,24 @@ MooJSONConverter : JSONlib {
 		});
 	}
 
+	queueConverted{|object|
+		object.isKindOf(MooObject).if({
+			converted = converted.add(object);
+		}, {
+			// something has gone wrong
+			//MooTypeError("Object is wrong type: %".format(object.class));
+		});
+	}
+
+	finish {
+		var obj;
+
+		obj = convtered.pop;
+		{obj.notNil}.while({
+			obj.restored;
+			obj = convtered.pop;
+		});
+	}
 
 	prConvertTree {|object, moo|
 
@@ -300,9 +348,43 @@ MooJSONConverter : JSONlib {
 
 	}
 
+	prConvertToSC { |v|
+		var res, val;
+		"prConvertToSC v is %".format(v).debug(this);
+		if(customDecoder.notNil) {
+			"We have a decoder".debug(this);
+			//input, converter, class, moo
+			//value {|input, converter, class, moo|
+			val = customDecoder.value(v, this, nil,  moo);
+			if(val.notNil) {
+				this.queueConverted(val);
+				^val
+			}
+		};
+
+
+		^super.prConvertToSC(v);
+
+
+	}
+
+	getIDFromRef{|dict, moo|
+		var type, id;
+
+		type = dict.atIgnoreCase("type");
+		type.notNil.if({
+			id = dict.atIgnoreCase("id");
+			^id;
+		});
+
+		^nil
+	}
+
 	restoreMoo{|obj, moo|
 
-		var class;
+		var class, type, id, object;
+
+		"restoreMoo %".format(obj).debug(this);
 
 		obj.isKindOf(Dictionary).if({
 
@@ -310,6 +392,18 @@ MooJSONConverter : JSONlib {
 
 			class.notNil.if({
 				^this.prConvertToMoo(obj, class, moo);
+			}, { // is it a reference
+				//type = obj.atIgnoreCase("type");
+				//type.notNil.if({
+				//	id = obj.atIgnoreCase("id");
+				id = this.getIDFromRef(obj, moo);
+				id.notNil.if({
+					object = moo.at(id.asSymbol);
+					object.notNil.if({
+						^object;
+					});
+					^id;
+				});
 			});
 		}, {
 			obj.isKindOf(Collection).if({ // a dictionary is a kind of a collection!
@@ -323,15 +417,24 @@ MooJSONConverter : JSONlib {
 
 	prConvertToMoo { |obj, class, moo|
 		var res, val;
+
+		"prConvertToMoo %".format(obj).debug(this);
+
 		if(customDecoder.notNil) {
+
+			//value {|input, converter, class, moo|
 			val = customDecoder.value(obj, this, class, moo);
 			if(val.notNil) {
+				this.queueConverted(val);
 				^val
 			}
 		};
 
 		^super.prConvertToSC(obj);
 	}
+
+
+
 
 }
 
