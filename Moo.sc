@@ -2,8 +2,8 @@ Moo {
 	classvar <>default;
 	var index, objects, users, <api, <semaphore, <pronouns, <host, <>lobby, <me, <generics;
 
-	*new{|netAPI, json|
-		^super.new.load(netAPI, json)
+	*new{|netAPI, json, loadType|
+		^super.new.load(netAPI, json, loadType)
 	}
 
 	*login{|netAPI|
@@ -46,7 +46,7 @@ Moo {
 			^default.fromJSON(json);
 		});
 
-		^bootstrap(api, json, loadType)
+		^this.bootstrap(api, json, loadType)
 	}
 
 
@@ -63,7 +63,7 @@ Moo {
 			^default.fromJSON(json, \parseFile);
 		});
 
-		^bootstrap(api, json, \parseFile)
+		^this.bootstrap(api, json, \parseFile)
 	}
 
 
@@ -123,17 +123,18 @@ Moo {
 			"made root".debug(this);
 
 			generics[\object] = MooObject(this, "object", root, -1);
+			generics[\object].description_("You see nothing special.");
 			//MooParser.reserveWord(\object, genericObject);
-
+			generics[\container] = MooContainer(this, "bag", root, generics[\object]);
 
 			"make a generic player".debug(this);
+			MooPlayer.generic = nil; // work around
 			generics[\player] = MooPlayer(this, "player", nil);
 			"made generic player, %".format(generics[\player].name).debug(this);
 			//genericPlayer.dump;
 			root.parent = generics[\player];
 			//MooParser.reserveWord(\player, genericPlayer);
 
-			generics[\container] = MooContainer(this, "bag", root, generics[\object]);
 
 			generics[\room] = MooRoom(this, "room", root, generics[\container]);
 			generics[\room].description_("An unremarkable place.");
@@ -145,8 +146,9 @@ Moo {
 					caller.postUser(object.name.asString +"\n" + object.description.value);
 					(object == caller.location).if({
 						stuff = object.contents;
+						"stuff".debug(object);
 						(stuff.size > 0).if({
-							stuff = stuff.collect({|o| Moo.refToObject(o).name });
+							stuff = stuff.collect({|o| MooObject.mooObject(o, object.moo).name });
 							stuff = stuff.join(", ");
 							caller.postUser("You see:" + stuff);
 						});
@@ -177,6 +179,54 @@ Moo {
 				}.asCompileString;
 
 			);
+
+			generics[\room].verb_(\inventory, \this, \none,
+
+				{|dobj, iobj, caller, object|
+					var str, last, skip = false, callerVerb;
+
+					// Did the caller specify the room?
+					dobj.isNil.if({
+						// no, this was called by default
+						(caller.location == object).if({
+							// and the caller is in the room
+
+							callerVerb = caller.verb(\inventory);
+							callerVerb.notNil.if({
+								skip = true;
+								callerVerb.invoke(dobj, iobj, caller, caller);
+							});
+						});
+					});
+
+					// No, the user wants to see our contents
+					skip.not.if({
+						//object.description.postln;
+						(object.contents.size == 0).if({
+							str = "% is empty.".format(object.name);
+						}, {
+							(object.contents.size == 1).if({
+								str = "% contains %.".format(object.name, object.contents[0].name);
+							}, {
+								(object.contents.size > 1).if({
+									last = object.contents.last;
+									str =  "% contains % and %.".format(object.name,
+										object.contents.copyRange(0, object.contents.size-2)
+										.collect({|c| c.name}).asList.join(", "),
+										last.name);
+								})
+							})
+						});
+						str.notNil.if({
+							str.debug(object);
+							caller.postUser(str);
+						} , {
+							"Should not be nil".warn;
+						});
+					});
+				}.asCompileString;
+
+			);
 			//MooParser.reserveWord(\room, genericRoom);
 
 			lobby = MooRoom(this, "Lobby", root, generics[\room]);
@@ -186,6 +236,9 @@ Moo {
 
 			//objects = [MooRoom(this, "Lobby", objects[0])];
 			//index = 2;
+
+			MooParser.reserveWord(\l, \look);
+			MooParser.reserveWord(\inv, \inventory);
 
 
 		});

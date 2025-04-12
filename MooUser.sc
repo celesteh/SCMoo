@@ -243,9 +243,9 @@ MooRoot : MooPlayer {
 
 }
 
-MooPlayer  : MooObject {
+MooPlayer  : MooContainer {
 
-	var contents, ownedObjects, <>user, <me, <permissions;
+	var  ownedObjects, <>user, <me, <permissions;
 
 	*new { |moo, name, user, self=false|
 		var uname;
@@ -258,7 +258,7 @@ MooPlayer  : MooObject {
 		});
 		//*new { |moo, name, maker, parent|
 
-		^super.new(moo, uname, \this, moo.genericPlayer ? moo.genericObject).initPlayer(user, self);
+		^super.new(moo, uname, \this, this.generic(moo)).initPlayer(user, self);
 	}
 
 	initPlayer {|iuser, self=false|
@@ -288,7 +288,7 @@ MooPlayer  : MooObject {
 
 			//owner = this;
 			immobel = true;
-			contents = [];
+			//contents = [];
 			ownedObjects = [];
 			//home = moo.lobby;
 			//pronouns = moo.pronouns.keys.choose;
@@ -316,7 +316,7 @@ MooPlayer  : MooObject {
 		this.verb_(\say, \this, \any,
 			{|dobj, iobj, caller, object|
 				caller.location.announceExcluding(caller, "% says, \"%\"".format(caller.name,
-					dobj.asString.stripEnclosingQuotes));
+					dobj.asString.stripEnclosingQuotes), caller);
 				caller.postUser("You say,  \"%\"".format(dobj.asString.stripEnclosingQuotes));
 			}.asCompileString;
 		);
@@ -327,6 +327,36 @@ MooPlayer  : MooObject {
 			}.asCompileString;
 		);
 
+		this.verb_(\inventory, \this, \none,
+
+			{|dobj, iobj, caller, object|
+				var str, last;
+				//object.description.postln;
+				(caller.contents.size == 0).if({
+					str = "You are not holding anything.";
+				}, {
+					(caller.contents.size == 1).if({
+						str = "You are holding: %.".format(caller.contents[0].name);
+					}, {
+						(caller.contents.size > 1).if({
+							last = caller.contents.last;
+							str =  "You are holding: % and %.".format(
+								caller.contents.copyRange(0, caller.contents.size-2)
+								.collect({|c| c.name }).asList.join(", "),
+								last.name
+							);
+						})
+					})
+				});
+				str.notNil.if({
+					str.debug(object);
+					caller.postUser(str);
+				} , {
+					"Should not be nil".warn;
+				});
+			}.asCompileString;
+
+		);
 
 
 		moo.api.add("postUser/%".format(this.id).asSymbol, { arg id, str;
@@ -365,7 +395,7 @@ MooPlayer  : MooObject {
 	//postln {|str, caller| this.post(str, caller) }
 
 
-
+	/*
 	remove {|item|
 
 		moo.semaphore.wait;
@@ -381,6 +411,7 @@ MooPlayer  : MooObject {
 		moo.semaphore.signal
 
 	}
+	*/
 
 	wizard {
 		^(permissions.level >= \wizard);
@@ -421,12 +452,12 @@ MooPlayer  : MooObject {
 		"MooPlayer.pr_JSONContents".debug(this);
 
 
-		stuff = contents.collect({|c| c !? { converter.convertToJSON(c.id) } ? "null" }).asList;
+		//stuff = contents.collect({|c| c !? { converter.convertToJSON(c.id) } ? "null" }).asList;
 
 		str = super.pr_JSONContents(converter);
 
-		str = str + ",\"contents\":  % ," .format(converter.convertToJSON(stuff)/*stuff.join(", ")*/);
-		str = str + "\"owned\":  % ," .format(converter.convertToJSON(ownedObjects)/*stuff.join(", ")*/);
+		//str = str + ",\"contents\":  % ," .format(converter.convertToJSON(stuff)/*stuff.join(", ")*/);
+		str = str + ", \"owned\":  % ," .format(converter.convertToJSON(ownedObjects)/*stuff.join(", ")*/);
 		str = str + "\"permission\": %".format(converter.convertToJSON(permissions));
 
 		"ok, we got the MooUSer: %".format(str).debug(this);

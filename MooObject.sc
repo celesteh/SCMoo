@@ -223,7 +223,7 @@ MooObject : NetworkGui  {
 
 					{|dobj, iobj, caller, object|
 						object.description.postln;
-						caller.postUser(object.name.asString +"\n" + object.description.value);
+						caller.postUser(object.description.value);
 					}.asCompileString;
 
 				);
@@ -235,7 +235,8 @@ MooObject : NetworkGui  {
 					{|dobj, iobj, caller, object|
 
 						(caller == object.owner).if({
-							object.description.value_(iobj.asString);
+							//object.description.value_(iobj.asString);
+							object.property_(\description, iobj.asString.stripEnclosingQuotes, false, caller);
 						});
 					}.asCompileString;
 
@@ -246,10 +247,11 @@ MooObject : NetworkGui  {
 				this.verb_(\drop, \this, \none,
 
 					{|dobj, iobj, caller, object|
-
-						caller.contents.remove(dobj);
-						caller.location.announce("% dropped %".format(caller, dobj));
-						caller.location.contents = caller.location.contents.add(dobj);
+						//caller.contents.remove(dobj);
+						caller.remove(dobj);
+						caller.location.announce("% dropped %".format(caller.name, dobj.name), caller);
+						//caller.location.contents = caller.location.contents.add(dobj);
+						caller.location.addObject(dobj);
 					}.asCompileString;
 
 				);
@@ -374,6 +376,7 @@ MooObject : NetworkGui  {
 			//superObj.notNil.if({
 			superObject.isKindOf(MooObject).if({
 				// copy the parent's properties
+				this.immobel = superObject.immobel;
 				superObject.properties.keys.do({|key|
 					this.properties[key].isNil.if({
 						// is it public?
@@ -515,7 +518,8 @@ MooObject : NetworkGui  {
 
 		key = key.asSymbol;
 
-		((properties.includesKey(key)) || verbs.includesKey(key)).if({
+		// We can blow away existing verbs, but not if the name is use by a property
+		((properties.includesKey(key))/* || verbs.includesKey(key)*/).if({
 			MooError("% name already in use by %".format(key, this.name)).throw;
 		}, {
 			newV = MooVerb(key, dobj, iobj, func, this, publish);
@@ -524,9 +528,14 @@ MooObject : NetworkGui  {
 		});
 	}
 
+	localVerb{|key|
+		^verbs.at(key.asSymbol);
+	}
+
+
 	getVerb {|key|
 
-		var superObj, verb = verbs.at(key.asSymbol);
+		var superObj,verb = this.localVerb(key);
 
 
 		verb.isNil.if({
@@ -611,6 +620,21 @@ MooObject : NetworkGui  {
 
 		^nil;
 
+	}
+
+	getClock {|quant|
+		var clock;
+		clock = this.property(\clock);
+		clock.isKindOf(MooClock).if({
+			quant = quant ? clock.quant;
+			^[clock.clock, quant];
+		});
+
+		location.notNil.if({
+			^location.getClock(quant);
+		});
+
+		^nil
 	}
 
 
@@ -882,16 +906,69 @@ MooContainer : MooObject {
 
 		semaphore = Semaphore(1);
 		contents = [];
-		immobel = superObj.immobel;
+		//immobel = superObj.immobel;
+
+		this.verb(\inventory).isNil.if({
+			this.verb_(\inventory, \this, \none,
+
+				{|dobj, iobj, caller, object|
+					var str, last;
+					//object.description.postln;
+					(object.contents.size == 0).if({
+						str = "% is empty.".format(object.name);
+					}, {
+						(object.contents.size == 1).if({
+							str = "% contains %.".format(object.name, object.contents[0].name);
+						}, {
+							(object.contents.size > 1).if({
+								last = object.contents.last;
+								str =  "% contains % and %.".format(object.name,
+									object.contents.copyRange(0, object.contents.size-2)
+									.collect({|c| c.name }).asList.join(", "),
+									last.name);
+							})
+						})
+					});
+					str.notNil.if({
+						str.debug(object);
+						caller.postUser(str);
+					} , {
+						"Should not be nil".warn;
+					});
+				}.asCompileString;
+
+			);
+		});
+
 	}
 
 	remove {|item|
 
+		var key;
+
+		"remove %".format(item).debug(this.class);
+
 		semaphore.wait;
+
+		"waited".debug(this);
+
 		contents.remove(item);
+
+		"removed from contents".debug(this.class);
+
 		//playableEnv.remove(item);
-		this.remove(item);
-		semaphore.signal
+		key = this.findKeyForValue(item);
+		"key %".format(key).debug(this.class);
+		//super.remove(item);
+		key.notNil.if({
+			this.removeAt(key);
+
+			"removed from environment".debug(this.class);
+		});
+
+		semaphore.signal;
+
+		"signaled".debug(this.class);
 
 	}
 
@@ -947,7 +1024,7 @@ MooContainer : MooObject {
 		stuff = contents.collect({|c| c !? { c.id } ? "null" });
 
 		^super.pr_JSONContents(converter) +
-		",\"contents\":  % ," .format(converter.convertToJSON(stuff));
+		",\"contents\":  % " .format(converter.convertToJSON(stuff));
 	}
 
 	containerRestore{ |dict, converter, moo|
@@ -1079,14 +1156,16 @@ MooRoom : MooContainer {
 		});
 
 		contents.do ({|thing|
-			thing.verbs.includesKey(\tell).if({
-				tell = thing.verbs.at(\tell);
-				tell.invoke(thing, str, caller);
+			//thing.verbs.includesKey(\tell).if({
+			tell = thing.getVerb(\tell);
+			tell.notNil.if({
+				//tell = thing.verbs.at(\tell);
+				tell.invoke(thing, str, caller, thing);
 			});
 		});
 	}
 
-	announceExcluding{|excluded, str|
+	announceExcluding{|excluded, str, caller|
 		var tell;
 
 		players.do({|player|
@@ -1096,13 +1175,13 @@ MooRoom : MooContainer {
 		});
 
 		contents.do ({|thing|
-			thing.verbs.includesKey(\tell).if({
-				tell = thing.verbs.at(\tell);
-				tell.invoke(thing, str);
+			//thing.verbs.includesKey(\tell).if({
+			tell = thing.getVerb(\tell);
+			tell.notNil.if({
+				//tell = thing.verbs.at(\tell);
+				tell.invoke(thing, str, caller, thing);
 			});
 		});
-
-
 	}
 
 
@@ -1201,7 +1280,7 @@ MooRoom : MooContainer {
 
 		^super.pr_JSONContents(converter) +
 		//",\"contents\":  % ," .format(converter.convertToJSON(stuff)/*stuff.join(", ")*/) +
-		"\"exits\": [ % ]".format(departures);//.format(converter.convertToJSON(departures)/*departures.join(",\n")*/);
+		", \"exits\": [ % ]".format(departures);//.format(converter.convertToJSON(departures)/*departures.join(",\n")*/);
 	}
 
 

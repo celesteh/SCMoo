@@ -110,7 +110,7 @@ MooJSONConverter : JSONlib {
 
 	//filePath, customDecoder=nil, useEvent=true, postWarnings=true, moo
 	*parseFile {|filePath, customDecoder=nil, useEvent=true, postWarnings=true, moo|
-		var converter, raw;
+		var converter, pre_raw, raw;
 				customDecoder = customDecoder ? MooCustomDecoder();
 		converter = this.new(
 			postWarnings,
@@ -118,7 +118,9 @@ MooJSONConverter : JSONlib {
 			useEvent: useEvent
 		).moo_(moo);
 		"parseFile".debug(converter);
-		raw = converter.prConvertToSC(filePath.parseJSONFile);
+		pre_raw = filePath.parseJSONFile;
+		"pre_raw is %".format(pre_raw).debug(converter);
+		raw = converter.prConvertToSC(pre_raw);
 		"parseFile raw %".format(raw).debug(converter);
 		^converter.restoreMoo(raw);
 	}
@@ -213,10 +215,10 @@ MooJSONConverter : JSONlib {
 	finish {
 		var obj;
 
-		obj = convtered.pop;
+		obj = converted.pop;
 		{obj.notNil}.while({
 			obj.restored;
-			obj = convtered.pop;
+			obj = converted.pop;
 		});
 	}
 

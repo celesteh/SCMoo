@@ -93,38 +93,61 @@ MooParser {
 
 	creation {
 
-		var thing, matched = false, index;
+		var thing, matched = false, index, switch;
 
 		"creation".postln;
 
 		(verb.asString.toLower.asSymbol == \make).if({
-			matched = true;
+
+			dobj.notNil.if({
 
 
-			switch(dobj.toLower.asSymbol,
-				\room, {
-					thing = MooRoom(actor.moo, iobj, actor);
-					actor.post("New room % is object number %".format(thing.name, thing.id));
-					//{ actor.move(thing); }.fork;
-				},
-				\stage, {
-					thing = MooStage(actor.moo, iobj, actor);
-					thing.location = actor.location;
-					{ actor.location.addObject(thing); }.fork;
-				},
-				\clock, {
-					thing = MooClock(actor.moo, iobj, actor);
-					//thing.location = actor.location;
-					{ actor.addObject(thing); }.fork;
-				},
-				\object, {
-					thing = MooObject(actor.moo, iobj, actor);
-					{ actor.addObject(thing); }.fork;
-				},
-				{ matched = false; }
-			);
 
+				switch = {|key, obj|
+
+					matched = true;
+
+					switch(key,
+						\room, {
+							thing = MooRoom(actor.moo, obj, actor);
+							actor.post("New room % is object number %".format(thing.name, thing.id));
+							//{ actor.move(thing); }.fork;
+						},
+						\stage, {
+							thing = MooStage(actor.moo, obj, actor);
+							thing.location = actor.location;
+							{ actor.location.addObject(thing); }.fork;
+						},
+						\clock, {
+							thing = MooClock(actor.moo, obj, actor);
+							//thing.location = actor.location;
+							{ actor.addObject(thing); }.fork;
+						},
+						\object, {
+							thing = MooObject(actor.moo, obj, actor);
+							{ actor.addObject(thing); }.fork;
+						},
+						{ matched = false; }
+					);
+
+					matched;
+				};
+
+				matched = switch.(dobj.toLower.asSymbol, iobj);
+				"matched %".debug(this);
+				matched.not.if({
+					iobj.isNil.if({
+						matched = switch.(\object, dobj.asSymbol);
+						matched.if({iobj = dobj});
+					});
+				});
+
+				matched.if({
+					actor.postUser("Made %.".format(iobj));
+				});
+			});
 		});
+
 
 		(verb.asString.toLower.asSymbol == \exit).if({
 			(actor.location.owner == actor).if({
@@ -135,11 +158,11 @@ MooParser {
 				} , {
 					// not a number. Make a new room and connect it
 					thing = MooRoom(actor.moo, iobj, actor);
-					actor.post("New room % is object number %".format(thing.name, thing.id));
+					actor.postUser("New room % is object number %".format(thing.name, thing.id));
 				});
 
 				actor.location.addExit(dobj, thing);
-				actor.post("New exit % to %".format(dobj.name, thing.name));
+				actor.postUser("New exit % to %".format(dobj.name, thing.name));
 				matched = true;
 			});
 		});
@@ -151,7 +174,7 @@ MooParser {
 
 	call {
 
-		var d_obj, i_obj, vfunc, found, object;
+		var d_obj, i_obj, vfunc, found, object, sub_verb, called=false;
 
 		"verb: %".format(verb).postln;
 
@@ -161,6 +184,10 @@ MooParser {
 				d_obj = dobj;
 			} , {
 				d_obj = this.findObj(dobj);
+
+				d_obj.isNil.if({
+					d_obj = this.reservedWord(dobj);
+				});
 			});
 		});
 
@@ -169,9 +196,15 @@ MooParser {
 			this.isString(iobj).if({
 				i_obj = iobj;
 			} , {
-				i_obj = this.findObj(i_obj) });
+				i_obj = this.findObj(i_obj);
+
+				i_obj.isNil.if({
+					i_obj = this.reservedWord(iobj);
+				});
+			});
 		});
 
+		// now try to find the verb
 		// is this a verb on the direct object?
 		d_obj .notNil.if({
 			vfunc = this.checkObj(d_obj);
@@ -193,6 +226,7 @@ MooParser {
 
 				object = actor.location;
 
+				/*
 				d_obj.isNil.if({
 					d_obj = actor.location;
 
@@ -201,6 +235,8 @@ MooParser {
 						i_obj = actor.location
 					});
 				});
+				*/
+
 			});
 		});
 
@@ -211,6 +247,7 @@ MooParser {
 
 				object = actor;
 
+				/*
 				d_obj.isNil.if({
 					d_obj = actor
 				},{
@@ -218,6 +255,7 @@ MooParser {
 						i_obj = actor
 					});
 				});
+				*/
 
 			});
 		});
@@ -227,8 +265,24 @@ MooParser {
 
 			//vfunc.func.value(d_obj, i_obj, actor);
 			vfunc.invoke(d_obj, i_obj, actor, object);
+			^true;
 
+		}, {
+			"not invoked".debug(this);
+			sub_verb = this.reservedWord(verb);
+			"found % , a %".format(sub_verb, sub_verb.class).debug(this);
+
+			(sub_verb.isKindOf(String) || sub_verb.isKindOf(Symbol)).if({
+				"found a reserve".debug(this);
+				verb = sub_verb;
+				called = this.call;
+			});
 		});
+
+		called.not.if({
+			actor.postUser("Input not understood.", actor);
+		});
+		^called;
 	}
 
 
@@ -666,7 +720,7 @@ MooVerb{
 		"invoke".postln;
 		f = str.compile.value; // "{|a| a.post}".compile.value returns a function
 
-		f.value(dobj, iobj, caller, object);
+		{f.value(dobj, iobj, caller, object);}.fork( * object.getClock);
 
 	}
 
