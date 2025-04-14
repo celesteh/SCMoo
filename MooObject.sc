@@ -164,6 +164,23 @@ MooObject : NetworkGui  {
 
 			"owner is %".format(owner).debug(this);
 
+			// ok, get the ID very early on
+
+			str = superID.asString;
+			id = (str.copyRange(str.size - 2.rrand(8),str.size-1) ++ Date.getDate.rawSeconds.asString)
+			.select({|d|
+				d.isDecDigit;
+			}).asString.copyRange(0, 17).asSymbol;
+			//(superID.asString ++ this.identityHash.asString).asSymbol;
+			id = moo.add(this, iname, this.id);
+			name = iname ? id.asString;
+
+			name.debug(this);
+
+			// got ID and name;
+
+
+
 			aliases = [];
 			verbs = IdentityDictionary();
 			properties = IdentityDictionary();
@@ -201,16 +218,6 @@ MooObject : NetworkGui  {
 			//playableEnv = NetworkGui.make(moo.api);
 			//playableEnv.know = true;
 
-			str = superID.asString;
-			id = (str.copyRange(str.size - 2.rrand(8),str.size-1) ++ Date.getDate.rawSeconds.asString)
-			.select({|d|
-				d.isDecDigit;
-			}).asString.copyRange(0, 17).asSymbol;
-			//(superID.asString ++ this.identityHash.asString).asSymbol;
-			id = moo.add(this, iname, this.id);
-			name = iname ? id.asString;
-
-			name.debug(this);
 
 			this.property_(\name, name, true, maker);//.action_(this, {|v| this.name = v.value });//.value.postln;
 
@@ -558,7 +565,7 @@ MooObject : NetworkGui  {
 	doesNotUnderstand { arg selector ... args;
 		var verb, property, func;
 
-		this.dumpBackTrace;
+		//this.dumpBackTrace;
 
 		selector = selector.asSymbol;
 
@@ -574,7 +581,7 @@ MooObject : NetworkGui  {
 
 		verb = this.getVerb(selector);//verbs[selector];
 		if (verb.notNil) {
-			"verb %".format(selector).postln;
+
 			//^func.functionPerformList(\value, this, args);
 			^verb.invoke(args[0], args[1], args[2], args[3]);
 		};
@@ -587,7 +594,7 @@ MooObject : NetworkGui  {
 			if(this.respondsTo(selector), {
 				warn(selector.asCompileString
 					+ "exists as a method name, so you can't use it as a pseudo-method.");
-				this.dumpBackTrace;
+				//this.dumpBackTrace;
 				{
 					this.perform(selector.asSetter, *args);
 					//"new result is %".format(this.perform(selector)).debug(this.id);
@@ -1119,7 +1126,7 @@ MooRoom : MooContainer {
 
 						iobj.announce("With a dramatic flourish, % enters".format(caller.name));
 						//players = players.add(caller);
-						caller.dumpStack;
+						//caller.dumpStack;
 						iobj.addPlayer(caller);
 						caller.location = iobj;
 						iobj.getVerb(\look).invoke(iobj, iobj, caller, iobj);

@@ -101,9 +101,9 @@ MooGUI : BileChat {
 
 		// this is not a proper callback function;
 		AppClock.sched(0.1, {
-			"ready for callback".debug(this);
+			//"ready for callback".debug(this);
 			callback.notNil.if({
-				"callback".debug(this);
+				//"callback".debug(this);
 				callback.value(this);
 			});
 			nil;

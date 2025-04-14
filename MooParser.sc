@@ -710,14 +710,14 @@ MooVerb{
 
 		str = func.value;
 
-		"-----------------------------------------------\ninvoke\ncaller is %".format(caller.name.value).debug("verb");
-		caller.dumpBackTrace;
+		//"-----------------------------------------------\ninvoke\ncaller is %".format(caller.name.value).debug("verb");
+		//caller.dumpBackTrace;
 
 		this.pass(str).not.if({
 			MooReservedWordError("Verb contains disallowed commands", this.check(str)).throw;
 		});
 		str.postln;
-		"invoke".postln;
+		//"invoke".postln;
 		f = str.compile.value; // "{|a| a.post}".compile.value returns a function
 
 		{f.value(dobj, iobj, caller, object);}.fork( * object.getClock);
