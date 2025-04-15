@@ -1,0 +1,3 @@
+[submodule "Node/client/OSCProxy"]
+	path = Node/client/OSCProxy
+	url = https://github.com/scazan/OSCProxy.git
