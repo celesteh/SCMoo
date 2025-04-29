@@ -77,12 +77,13 @@ MooParser {
 
 		var place, matched = false;
 
-		"movement".postln;
+		"movement".debug(this);
 
 		dobj.isNil.if({
 			actor.location.notNil.if({
 				place = actor.location.exit(verb);
 				place.notNil.if({
+					"move".debug(this);
 					{ actor.move(place); }.fork;
 					matched = true
 				});
@@ -93,7 +94,7 @@ MooParser {
 
 	creation {
 
-		var thing, matched = false, index, switch;
+		var thing, matched = false, index, switch, clone;
 
 		"creation".postln;
 
@@ -110,7 +111,7 @@ MooParser {
 					switch(key,
 						\room, {
 							thing = MooRoom(actor.moo, obj, actor);
-							actor.post("New room % is object number %".format(thing.name, thing.id));
+							actor.postUser("Here (%) is object number %\nNew room % is object number %".format(actor.location.name, actor.location.id, thing.name, thing.id));
 							//{ actor.move(thing); }.fork;
 						},
 						\stage, {
@@ -152,21 +153,51 @@ MooParser {
 		(verb.asString.toLower.asSymbol == \exit).if({
 			(actor.location.owner == actor).if({
 				// exit north to 135
-				index = iobj.asInteger;
-				(index > 0).if({
-					thing = actor.moo[index];
-				} , {
+				(iobj.isDecimal).if({
+					index= iobj.select({|c| c.isDecDigit }).asInteger;
+					//index = iobj.stripWhiteSpace.asInteger;
+					"% % iobj is % index is".format(iobj.class, iobj.isDecimal, iobj, index).debug(this);
+					(index > 0).if({
+						thing = actor.moo[index];
+					});
+				});
+				thing.isNil.if({
+					thing = this.findObj(iobj);
+				});
+				thing.isNil.if({
 					// not a number. Make a new room and connect it
 					thing = MooRoom(actor.moo, iobj, actor);
+					actor.postUser("Here (%) is object number %".format(actor.location.name, actor.location.id));
 					actor.postUser("New room % is object number %".format(thing.name, thing.id));
 				});
 
 				actor.location.addExit(dobj, thing);
-				actor.postUser("New exit % to %".format(dobj.name, thing.name));
+				actor.postUser("New exit % to %".format(dobj, thing.name));
 				matched = true;
 			});
 		});
 
+		(verb.asString.toLower.asSymbol == \copy).if({
+
+			"copy".debug(this);
+
+			(dobj.isDecimal).if({
+				index= dobj.select({|c| c.isDecDigit }).asInteger;
+				//index = iobj.stripWhiteSpace.asInteger;
+				"% % dobj is % index is".format(dobj.class, dobj.isDecimal, dobj, index).debug(this);
+				(index > 0).if({
+					clone = actor.moo[index];
+				});
+			});
+			clone.isNil.if({
+				clone = this.findObj(dobj);
+			});
+			clone.notNil.if({
+				matched = true;
+				thing = clone.class.new(actor.moo, iobj.asSymbol, actor, clone);
+				{ actor.addObject(thing); }.fork;
+			});
+		});
 
 
 		^matched;
@@ -304,8 +335,10 @@ MooParser {
 				} , {
 					(word.size > 0).if({
 						arr = arr.add(word);
-						word = "\"";
+						//word = "\"";
 					});
+					word = "\"";
+					"started a string".debug(this)
 				});
 
 				inString = inString.not;
@@ -324,6 +357,8 @@ MooParser {
 	}
 
 	isString {|token|
+
+		"isString".debug(this);
 
 		^(token.beginsWith("\"") && token.endsWith("\""));
 
@@ -455,9 +490,23 @@ MooParser {
 
 	findObj { |key|
 
-		var obj, found = false;
+		var obj, found = false, num, str;
 
 		obj = key;
+
+		(key.isKindOf(String) || key.isKindOf(Symbol)).if({
+			str = key.asString;
+			str.isDecimal.if({
+				"key %".format(key).debug(this);
+				num = str.select({|c| c.isDecDigit }).asInteger;
+				obj = actor.moo.at(num);
+				obj.notNil.if({
+					found = true;
+				}, {
+					obj = key; // nevermind
+				});
+			});
+		});
 
 		key.isKindOf(SimpleNumber).if({
 			// it's the object ID
@@ -514,11 +563,14 @@ MooParser {
 
 		//found.not.if.({ obj = key });
 
+		"key is % object is %".format(key, obj).debug(this);
+
 		^obj
 
 	}
 
 }
+
 
 
 
@@ -706,12 +758,10 @@ MooVerb{
 	}
 
 	invoke {|dobj, iobj, caller, object|
-		var str, f;
+		var str, f, clock;
 
 		str = func.value;
 
-		//"-----------------------------------------------\ninvoke\ncaller is %".format(caller.name.value).debug("verb");
-		//caller.dumpBackTrace;
 
 		this.pass(str).not.if({
 			MooReservedWordError("Verb contains disallowed commands", this.check(str)).throw;
@@ -720,11 +770,44 @@ MooVerb{
 		//"invoke".postln;
 		f = str.compile.value; // "{|a| a.post}".compile.value returns a function
 
-		{f.value(dobj, iobj, caller, object);}.fork( * object.getClock);
+		object.notNil.if({
+			clock = object.getClock;
+		} , {
+			caller.location.notNil.if({
+				clock = caller.location.getClock;
+			});
+		});
+
+		{f.value(dobj, iobj, caller, object);}.fork( * clock);
 
 	}
 
 	func {
 		^func.value;
 	}
+}
+
+
+
++ String {
+
+  isDecimal {
+
+		var str, num = true;
+
+		str = this.stripWhiteSpace;
+
+		str.do({|char|
+
+			((char == $\-) || ( char == $\. )  || (char.isDecDigit)).not.if({
+				num = false;
+				^num; // I know this is bad, but if it's a long string, whatevs
+			});
+		});
+
+		^num;
+	}
+
+
+
 }

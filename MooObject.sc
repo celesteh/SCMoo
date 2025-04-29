@@ -1,6 +1,6 @@
 MooObject : NetworkGui  {
 
-	classvar >generic;
+	//classvar >generic;
 
 	var <moo,  owner, <id, <aliases, verbs, location,  <properties, <>immobel,
 	superObj;
@@ -10,17 +10,19 @@ MooObject : NetworkGui  {
 
 		// this method is expensive, especially with the recursion, however, it doesn't get called often
 
-		ret = generic;
-		ret.notNil.if({
-			^ret
-		});
+		//ret = generic;
+		//ret.notNil.if({
+		//	^ret
+		//});
 
 		// search the moo
+		moo = moo ? Moo.default;
+
 		moo.notNil.if({
 
 			ret = moo.generics.values.detect({|item| item.class == this});
 			ret.notNil.if({
-				generic = ret;
+				//generic = ret;
 				^ret;
 			});
 
@@ -28,7 +30,7 @@ MooObject : NetworkGui  {
 			ret = moo_generics.detect({|item| item.class == this});
 
 			ret.notNil.if({
-				generic = ret;
+				//generic = ret;
 				^ret;
 			});
 		});
@@ -133,7 +135,24 @@ MooObject : NetworkGui  {
 
 	initMooObj {|imoo, iname, maker, parent|
 
-		var /*name,*/ superID, superKey, public, str;
+		var /*name,*/ superID, superKey, public, str, time;
+
+
+		iname.notNil.if({
+
+			iname = iname.asString.stripEnclosingQuotes;
+			this.prValidID(iname).not.if({
+				MooMalformedKeyError("% is not a valid ID".format(iname)).throw;
+			});
+		});
+
+			aliases = [];
+			verbs = IdentityDictionary();
+			properties = IdentityDictionary();
+			immobel = false;
+
+
+
 
 		// iff add is flase, this has been caled in a weird way
 
@@ -145,9 +164,9 @@ MooObject : NetworkGui  {
 		moo.notNil.if({
 
 			// the first one is the generic
-			this.class.generic.isKindOf(this.class).not.if({
-				this.class.generic = this;
-			});
+			//this.class.generic.isKindOf(this.class).not.if({
+			//	this.class.generic = this;
+			//});
 
 			super.make_init(moo.api, nil, {});
 
@@ -166,11 +185,19 @@ MooObject : NetworkGui  {
 
 			// ok, get the ID very early on
 
-			str = superID.asString;
-			id = (str.copyRange(str.size - 2.rrand(8),str.size-1) ++ Date.getDate.rawSeconds.asString)
-			.select({|d|
+
+
+
+			str = superID.asString.copyRange(str.size - 4,str.size-1);
+			time = ((Date.getDate.rawSeconds * 10) + 1000.rand).ceil.asString.copyRange(7,10);
+			"time %".format(time).debug(this);
+			//id = (str.copyRange(str.size - 2.rrand(8),str.size-1) ++ Date.getDate.rawSeconds.asString)
+			id = (str ++ time).select({|d|
 				d.isDecDigit;
-			}).asString.copyRange(0, 17).asSymbol;
+			}).asString;//.copyRange(0, 17).asInteger;
+			"id is % ".format(id).debug(this);
+			id = id.copyRange(id.size - 8, id.size);
+			"id is % ".format(id).debug(this);
 			//(superID.asString ++ this.identityHash.asString).asSymbol;
 			id = moo.add(this, iname, this.id);
 			name = iname ? id.asString;
@@ -181,16 +208,9 @@ MooObject : NetworkGui  {
 
 
 
-			aliases = [];
-			verbs = IdentityDictionary();
-			properties = IdentityDictionary();
-			immobel = false;
-
 
 			//super.make_init(moo.api, nil, {});
 
-			"about to do some parent stuff".debug(this);
-			this.pr_superObj_(parent);
 			/*
 			parent.notNil.if({
 				parent.isKindOf(MooObject).if({
@@ -211,8 +231,11 @@ MooObject : NetworkGui  {
 			//playableEnv = NetworkGui.make(moo.api);
 			//playableEnv.know = true;
 
+			"about to do some parent stuff %".format(parent).debug(this);
+			//{ "%".format(parent.name).debug(this); }.try;
+			this.pr_superObj_(parent);
 			"about to copy properties".debug(this);
-			this.pr_copyParentProperties();
+			this.pr_copyParentProperties(parent);
 
 
 			//playableEnv = NetworkGui.make(moo.api);
@@ -285,17 +308,22 @@ MooObject : NetworkGui  {
 			parent.isKindOf(MooObject).if({
 				superID = parent.id;
 				superObj = parent;
+				"parent name %".format(superObj.name).debug(this);
 			}, {
 				superID = parent;
 				//superID.isKindOf(SimpleNumber).if({
-				(superID.isKindOf(String) || superID.isKindOf(Symbol)).if({
-					superObj = moo.at(superID.asSymbol);
-					superObj.isNil.if({ superObj = superID; });
-				});
+				//(superID.isKindOf(String) || superID.isKindOf(Symbol)).if({
+				//	superObj = moo.at(superID.asSymbol);
+				//	superObj.isNil.if({ superObj = superID; });
+				//});
+				superObj = MooObject.mooObject(superID, moo);
+				superObj.isNil.if({ superObj = superID; "damn".debug(this); });
 			});
 
 			this.property_(\parent, superID, false, owner);
 		});
+
+		"parent is %".format(superID).debug(this);
 	}
 
 	// obj could be a moo object or an ID string and we don't know which
@@ -310,7 +338,8 @@ MooObject : NetworkGui  {
 			^obj
 		});
 		relevantID = obj;
-		obj = moo.at(relevantID.asSymbol);
+		//obj = moo.at(relevantID.asSymbol);
+		obj = moo.at(relevantID.asInteger);
 		obj.notNil.if({
 			^obj
 		});
@@ -343,10 +372,10 @@ MooObject : NetworkGui  {
 		obj.isKindOf(MooObject).if({
 			^obj.id;
 		});
-		(obj.isKindOf(String) || obj.isKindOf(Symbol)).not.if({
-			obj = obj.asString;
-		});
-		^obj.asSymbol;
+		//(obj.isKindOf(String) || obj.isKindOf(Symbol)).not.if({
+		//	obj = obj.asString;
+		//});
+		^obj.asInteger;//.asSymbol;
 	}
 
 	// this very dodgy method sorts out circular dependancies
@@ -369,12 +398,17 @@ MooObject : NetworkGui  {
 
 	formatKey{|key|
 
-		^"%/%".format(key, id).asSymbol;
+		^"%/%".format(id, key).asSymbol;
 	}
 
-	pr_copyParentProperties{
+	pr_copyParentProperties{|parent|
 
 		var public, superObject;
+
+		superObj.isNil.if({
+			//superObj =
+			this.pr_superObj = parent;
+		});
 
 		superObj.notNil.if({
 
@@ -405,7 +439,9 @@ MooObject : NetworkGui  {
 			valid = MooVerb.pass(key);
 
 			// weird chars
-			naughty_count = key.sum({|char| (char.isAlphaNum).if({ 0 } , { 1 }) });
+			naughty_count = key.sum({|char|
+				((char.isAlphaNum) || (char == $\ ) || (char == $_ )).if({ 0 } , { 1 })
+			});
 			(naughty_count > 0).if({ valid = false });
 
 			// starts with a number
@@ -563,7 +599,7 @@ MooObject : NetworkGui  {
 
 
 	doesNotUnderstand { arg selector ... args;
-		var verb, property, func;
+		var verb, property, func, ret;
 
 		//this.dumpBackTrace;
 
@@ -606,12 +642,16 @@ MooObject : NetworkGui  {
 					//^(properties[selector].value_(*args));
 					// does this belong to us?
 					properties[selector].notNil.if({
-						^(properties[selector].value_(*args));
+						ret = (properties[selector].value_(*args));
+						//^ret;
 					} , {
 						// it must belong to a parent
 						// we need a way of seeing if it's shared or not
-						^this.property_(selector, *args);
+						this.property_(selector, *args);
+						//^ret;
 					});
+					this.update;
+					^ret;
 				});
 			});
 		};
@@ -648,19 +688,23 @@ MooObject : NetworkGui  {
 	move {|newLocation|
 
 		var oldLocation, moved = false;
+		oldLocation = this.location;
 
-		immobel.not.if({
-			this.isPlayer.not.if({
+		this.isPlayer.not.if({
+			immobel.not.if({
 				oldLocation.remove(this);
 				newLocation.addObject(this);
-
-			} , {
-				//name = this.property(\name);
-				//oldLocation.player.remove(this);
-				oldLocation.depart(this, oldLocation, this);
-				newLocation.arrive(this, newLocation, this);
+				moved = true;
 			});
+		} , {
+			//name = this.property(\name);
+			//oldLocation.player.remove(this);
+			oldLocation.depart(this, oldLocation, this);
+			newLocation.arrive(this, newLocation, this);
+			moved = true;
+		});
 
+		moved.if({
 			this.location = newLocation;
 		})
 	}
@@ -670,12 +714,24 @@ MooObject : NetworkGui  {
 
 		var matches = false;
 
-		matches = (key == this.name);
+		key = key.asString;
+
+		"this.name %".format(this.name).debug(this);
+
+		//matches = (key == this.name);
+
+		matches = ( key.compare(this.name.value.asString, true) == 0 );
 
 		matches.not.if({
 
-			matches = aliases.includes(key)
+			//matches = aliases.includes(key)
+			//matches = aliases.includesIgnoreCase(key)
+			matches = aliases.any({|alias|
+				key.compare(alias.asString, true) == 0;
+			});
 		});
+
+		"matches %".format(matches).debug(this);
 
 		^matches;
 	}
@@ -1210,7 +1266,7 @@ MooRoom : MooContainer {
 	}
 
 	exit{|key|
-		^MooObject.mooObject(exits[\key] , moo);
+		^MooObject.mooObject(exits.atIgnoreCase(key) , moo);
 	}
 
 	addExit{|key, room|

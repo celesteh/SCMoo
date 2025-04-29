@@ -77,8 +77,10 @@ Moo {
 		});
 
 		semaphore = Semaphore(1);
-		pronouns = IdentityDictionary[ \masc -> IdentityDictionary[
+		pronouns = IdentityDictionary[ \he -> IdentityDictionary[
 			\sub -> "He", \ob-> "Him", \pa-> "His", \po -> "His", \ref -> "Himself" ];
+		 \she -> IdentityDictionary[
+			\sub -> "She", \ob-> "Her", \pa-> "Her", \po -> "Her", \ref -> "Herself" ];
 		];
 
 		host = false;
@@ -95,10 +97,10 @@ Moo {
 
 		api.dump;
 
-		objects = IdentityDictionary();//[];
+		objects = Dictionary();//IdentityDictionary();//[];
 		index = 0;
 		users = IdentityDictionary();
-		generics = IdentityDictionary();
+		generics = Dictionary();
 
 		host = true;
 
@@ -124,12 +126,32 @@ Moo {
 
 			generics[\object] = MooObject(this, "object", root, -1);
 			generics[\object].description_("You see nothing special.");
+			generics[\object].verb_(\get, \this, \none,
+				{|dobj, iobj, caller, object|
+
+					"get".debug(object);
+
+					object.immobel.not.if({
+
+						object.location.remove(object);
+						caller.addObject(object);
+						caller.location.announceExcluding(caller, "% picked up %.".format(caller.name, object.name), caller);
+						caller.postUser("You picked up %".format(object.name), caller);
+					} , {
+						caller.postUser("You cannot pick up %".format(object.name), caller);
+					});
+				}
+			);
+
+			//generics[MooObject] = generics[\object];
 			//MooParser.reserveWord(\object, genericObject);
 			generics[\container] = MooContainer(this, "bag", root, generics[\object]);
+			//generics[MooContainer] = generics[\container];
 
 			"make a generic player".debug(this);
 			MooPlayer.generic = nil; // work around
 			generics[\player] = MooPlayer(this, "player", nil);
+			//generics[MooPlayer] = generics[\player];
 			"made generic player, %".format(generics[\player].name).debug(this);
 			//genericPlayer.dump;
 			root.parent = generics[\player];
@@ -163,8 +185,9 @@ Moo {
 								caller.postUser(others ++", and" + last.name + "are here.");
 							});
 						});
-						exits = object.exits.keys;
+						exits = object.exits.keys.asList;
 						(exits.size == 1).if({
+							"one exit %".format(exits.first).debug(object);
 							caller.postUser("You can exit" + exits[0].asString);
 						}, {
 							(exits.size > 1).if({
@@ -228,6 +251,7 @@ Moo {
 
 			);
 			//MooParser.reserveWord(\room, genericRoom);
+			//generics[MooRoom] = generics[\room];
 
 			lobby = MooRoom(this, "Lobby", root, generics[\room]);
 			me = root;
@@ -274,7 +298,7 @@ Moo {
 		semaphore.wait;
 
 		obj.isKindOf(MooRoot).if({
-			id = \0;
+			id = 0;
 			should_add = objects.at(id).isNil;
 			should_add.not.if({
 				MooDuplicateError("You already have a Root").throw;
@@ -304,12 +328,19 @@ Moo {
 		});
 		*/
 
+		id.isKindOf(Symbol).if({
+			id = id.asString;
+		});
+		id.isKindOf(String).if({
+			id = id.select({|c| c.isDecDigit }).asInteger;
+		});
+
 		should_add.if({
 
 			count = 0;
 			{objects[id].notNil}. while ({
 				"find an unused id, %".format(id).debug(this);
-				id = (id ++ count).asSymbol;
+				id = id + 1; //(id ++ count).asSymbol;
 			});
 
 			//obj_index = objects.size;
@@ -347,9 +378,10 @@ Moo {
 		var obj_index;
 
 		//obj.isInteger.if({
-		(obj.isKindOf(Symbol) || obj.isKindOf(String)).if({
-			obj_index = obj.asSymbol;
-		} , {
+		//(obj.isKindOf(Symbol) || obj.isKindOf(String)).if({
+		//	obj_index = obj.asSymbol;
+		//} , {
+		obj.isKindOf(SimpleNumber).not.if({
 			obj_index = objects.findKeyForValue(obj);
 		});
 
@@ -361,10 +393,10 @@ Moo {
 
 	at {|ind|
 
-		(index.isKindOf(String) || index.isKindOf(Symbol)).not.if({
-			index = index.asString;
-		});
-		index = index.asSymbol;
+		//(index.isKindOf(String) || index.isKindOf(Symbol)).not.if({
+		//	index = index.asString;
+		//});
+		//index = index.asSymbol;
 
 		^objects.at(ind);
 	}
@@ -628,6 +660,7 @@ MooTypeError : MooError {}
 MooVerbError : MooError {}
 MooCompileError : MooVerbError {}
 MooDuplicateError : MooError{}
+MooMalformedKeyError : MooError {}
 
 MooReservedWordError : MooVerbError { // this has problems
 	var <>badStrings;
