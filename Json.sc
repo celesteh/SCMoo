@@ -107,6 +107,9 @@ MooJSONConverter : JSONlib {
 		^converter.restoreMoo(raw);
 	}
 
+	*parseText{ arg ...args;
+		^this.convertToSC(*args);
+	}
 
 	//filePath, customDecoder=nil, useEvent=true, postWarnings=true, moo
 	*parseFile {|filePath, customDecoder=nil, useEvent=true, postWarnings=true, moo|

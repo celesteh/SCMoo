@@ -51,12 +51,12 @@ Moo {
 
 
 	*load{|json, api|
-
-		var order;
-		json.isKindOf(NetAPI).if({
-			order = api;
-			api = json;
-			json = order;
+		// there's a reason I was worried about passing arguments in the wrong order
+		var arg1, arg2;
+		arg1 = json; arg2 = api;
+		arg1.isKindOf(NetAPI).if({
+			api = arg1;
+			json = arg2;
 		});
 
 		default.notNil.if({
@@ -149,7 +149,6 @@ Moo {
 			//generics[MooContainer] = generics[\container];
 
 			"make a generic player".debug(this);
-			MooPlayer.generic = nil; // work around
 			generics[\player] = MooPlayer(this, "player", nil);
 			//generics[MooPlayer] = generics[\player];
 			"made generic player, %".format(generics[\player].name).debug(this);

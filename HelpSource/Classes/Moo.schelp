@@ -1,0 +1,236 @@
+TITLE:: Moo
+summary:: A Moo in SuperCollider
+categories:: Libraries/BiLETools/SCMoo
+related:: Classes/MooVerb, Classes/MooObject, Classes/NetAPI, Reference/SomeRelatedStuff, etc.
+
+DESCRIPTION::
+A MOO is a Multi-User Dungeon, but Object Oriented
+
+
+CLASSMETHODS::
+
+METHOD:: default
+Get the Moo running
+
+
+METHOD:: new
+
+ARGUMENT:: netAPI
+an instance of NetAPI, which should be active and running
+
+ARGUMENT:: json
+A string of JSON or a path to a JSON file
+
+ARGUMENT:: loadType
+ \parseFile to read a file or \parseText to read in a text string
+
+
+METHOD:: load
+Load moo objects from a file
+
+ARGUMENT:: json
+A path to a JSON file
+
+ARGUMENT:: api
+the instance of NetAPI that is handling all the networking
+
+
+METHOD:: login
+Log in to a moo based primarily on a remote server. This is not yet implemented
+
+ARGUMENT:: netAPI
+the NetAPI has already joined the network. This is not yet implemented
+
+
+METHOD:: fromJSON
+Load the Moo's objects from a JSON file or string
+
+ARGUMENT:: json
+A string that is either a file name or a JSON string
+
+ARGUMENT:: api
+an instance of NetAPI, which should be active and running
+
+ARGUMENT:: loadType
+ \parseFile to read a file or \parseText to read in a text string
+
+METHOD:: bootstrap
+Start a moo from nothing as the main server. You can optionally supply JSON or else it will this will create a few object types, a Root user and a single room called Lobby
+
+ARGUMENT:: api
+an instance of NetAPI, which should be active and running
+
+ARGUMENT:: json
+An optional string which may contain a file path or a JSON string
+
+ARGUMENT:: loadType
+ \parseFile to read a file or \parseText to read in a text string
+
+
+
+INSTANCEMETHODS::
+
+METHOD:: me
+This object is the user currently logged in
+
+returns:: The instance of MooPlayer that corresponds to the one I'm using in the GUI
+
+
+METHOD:: pronouns
+Not yet implemented, but there is going to be support for pronouns as in LamdbaMoo
+returns:: (describe returnvalue here)
+
+METHOD:: api
+(describe method here)
+
+returns:: (describe returnvalue here)
+
+METHOD:: fromJSON
+(describe method here)
+
+ARGUMENT:: obj
+(describe argument here)
+
+ARGUMENT:: converter
+(describe argument here)
+
+ARGUMENT:: linkToThis
+(describe argument here)
+
+ARGUMENT:: loadType
+(describe argument here)
+
+returns:: (describe returnvalue here)
+
+METHOD:: host
+(describe method here)
+
+returns:: (describe returnvalue here)
+
+METHOD:: add
+(describe method here)
+
+ARGUMENT:: obj
+(describe argument here)
+
+ARGUMENT:: name
+(describe argument here)
+
+ARGUMENT:: id
+(describe argument here)
+
+returns:: (describe returnvalue here)
+
+METHOD:: lobby
+(describe method here)
+
+returns:: (describe returnvalue here)
+
+METHOD:: load
+(describe method here)
+
+ARGUMENT:: net
+(describe argument here)
+
+ARGUMENT:: json
+(describe argument here)
+
+ARGUMENT:: loadType
+(describe argument here)
+
+returns:: (describe returnvalue here)
+
+METHOD:: genericObject
+(describe method here)
+
+returns:: (describe returnvalue here)
+
+METHOD:: genericPlayer
+(describe method here)
+
+returns:: (describe returnvalue here)
+
+METHOD:: toJSON
+(describe method here)
+
+ARGUMENT:: converter
+(describe argument here)
+
+returns:: (describe returnvalue here)
+
+METHOD:: init
+(describe method here)
+
+ARGUMENT:: net
+(describe argument here)
+
+returns:: (describe returnvalue here)
+
+METHOD:: init_remote
+(describe method here)
+
+ARGUMENT:: net
+(describe argument here)
+
+returns:: (describe returnvalue here)
+
+METHOD:: delete
+(describe method here)
+
+ARGUMENT:: obj
+(describe argument here)
+
+returns:: (describe returnvalue here)
+
+METHOD:: genericRoom
+(describe method here)
+
+returns:: (describe returnvalue here)
+
+METHOD:: find
+(describe method here)
+
+ARGUMENT:: name
+(describe argument here)
+
+returns:: (describe returnvalue here)
+
+METHOD:: generics
+(describe method here)
+
+returns:: (describe returnvalue here)
+
+METHOD:: me
+(describe method here)
+
+returns:: (describe returnvalue here)
+
+
+EXAMPLES::
+
+To start a new moo as a Root user:
+
+code::
+{ m = Moo.bootstrap(NetAPI.broadcast("foo", "bar")); }.fork
+::
+
+To save your objects to a file:
+code::
+(
+f = File("/tmp/Moo.JSON".standardizePath, "w");
+f.write(m.toJSON);
+f.close;
+)
+::
+
+To load your saved objects
+code::
+(
+{
+	n = NetAPI.broadcast("foo", "bar");
+	5.wait;
+	m = Moo.bootstrap(n, "/tmp/Moo.JSON".standardizePath);
+}.fork;
+)
+::
+

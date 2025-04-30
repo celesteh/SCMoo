@@ -30,6 +30,19 @@ To load your saved objects
     }.fork;
   )
 
+## Socialising and Role playing
+
+To speak, start a line with " and do not have a closing quote
+
+	"Hello World!
+
+To pose, start a line with / and write the action you wish to perform as you want other users to see it
+
+	/waves hello
+
+To find out what you're holding, type ```inventory`` or ``inv``
+
+	inv
 
 ## Building Moo rooms and objects
 
@@ -89,10 +102,9 @@ If we've saved to moo in m (as in the very first example at the top of this file
 In an example above, we made a cat and dropped it, so it's in our room. Let's do some stuff with the cat, in a document. A small window will open with a play button. Boot the server and press play to play it.
 
 	m.me.location.push;
-	~cat.pattern_(Pdef(\cat, Pbind(\degree, Pwhite(0,5))));
-	~cat.show;
 	~cat.property_(\freq);
-	Pdef(\cat, Pbind(\freq, Pfunc({~cat.freq})));
+	~cat.show;
+	~cat.pattern_(Pbind(\freq, ~cat[\freq]));
 
 You'll note that the labels in the window start with a number. That is the object's ID.
 You can also use sclang to write verbs on your objects:
@@ -158,5 +170,6 @@ Then drop the cat where Bob can pick it up.
 
 ## To do
 
-No give verb yet
-Pdefs, patterns and synths are not yet shared, nor saved to JSON
+* Logins
+* No give verb yet
+* Pdefs, patterns and synths are not yet shared, nor saved to JSON

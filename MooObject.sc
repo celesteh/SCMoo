@@ -69,6 +69,8 @@ MooObject : NetworkGui  {
 			properties = IdentityDictionary();
 			immobel = false;
 
+			manyPlayers = false;
+
 
 			name = dict.atIgnoreCase("name");
 			id = dict.atIgnoreCase("id");
@@ -153,7 +155,6 @@ MooObject : NetworkGui  {
 
 
 
-
 		// iff add is flase, this has been caled in a weird way
 
 		"initMooObj imoo * ".format(imoo).debug(this);
@@ -169,6 +170,8 @@ MooObject : NetworkGui  {
 			//});
 
 			super.make_init(moo.api, nil, {});
+			manyPlayers = false;
+
 
 			//moo = imoo;
 			"maker is %".format(maker).debug(this);
@@ -520,6 +523,7 @@ MooObject : NetworkGui  {
 				shared = this.addLocal(this.formatKey(key), ival);
 			});
 			properties.put(key, shared);
+			this.put(key, shared); // make sure it's accessible with out the ID
 		});
 
 		//properties.keys.postln;
@@ -745,6 +749,8 @@ MooObject : NetworkGui  {
 
 		^false;
 	}
+
+
 
 	toJSON{|converter|
 

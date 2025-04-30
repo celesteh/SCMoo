@@ -1,6 +1,6 @@
 TITLE:: MooVerb
 summary:: Functions for MooObjects
-categories:: Libraries/BiLETools/Moo
+categories:: Libraries/BiLETools/SCMoo
 related:: Classes/MooObject, Classes/Moo, Classes/SharedResource
 
 DESCRIPTION::
@@ -48,6 +48,64 @@ INSTANCEMETHODS::
 
 EXAMPLES::
 
+Verbs are attached to MooObjects.
+
+In the Moo's GUI, first make an object we'll call cat and add some properties.
+
 code::
-(some example code)
+make cat
+describe cat as "A thoroughly fluffy beast. You've never seen so much hair."
 ::
+
+Currently, the easiest way to add and modify properties is via a Document window (or tab in the IDE). Your player is an Environment, so we can get access to everything you're holding via that.
+
+code::
+Moo.default.me.push;
+::
+
+Now let's add a property:
+
+code::
+~cat.property_(\freq);
+::
+
+Now let's add a verb:
+code::
+~cat.verb_(\pet, \this, \none,
+	{|dobj, iobj, caller, object|
+
+		caller.location.announceExcluding(caller, "% pets %.".format(caller.name, object.name), caller);
+		caller.postUser("You pet %".format(object.name), caller);
+		object.freq_(550, caller);
+		1.rrand(3).wait;
+		caller.location.announce("% purrs happily.".format(object.name), caller);
+		object.freq_(440, caller);
+		1.wait;
+		caller.location.announceExcluding(caller, "% angrily bites %.".format(object.name, caller.name), caller);
+		caller.postUser("% angrily bites you.".format(object.name), caller);
+		object.freq_(880, caller);
+	}
+);
+::
+
+The first few arguments tell us that the verb is called "pet", the object it's attached to is the direct object and there is no indirect object. The user can invoke it in the MOO gui:
+
+code:: pet cat::
+
+Every verb is defined by a function that takes as arguments the direct object, the indirect object, the user who invoked the verb and the object it is attached to. dobj and iobj will be matched to other objects help by the caller or in the room, if possible, or, if not, will be the strings the user used when invoking the verb.
+
+The above verb does normal Moo things like communicating with users:
+
+In the above example, code::caller.location.announceExcluding(excluded, string, caller):: sends a text output
+message to everyone but the player listed as excluded. The message is string. And caller is the person
+generating it.
+
+code::caller.postUser(string, caller):: sends string to just the caller.
+
+code::caller.location.announce(string, caller):: sends string to everyone in the room.
+
+This verb also changes one of cat's properties, freq. We can access a property via
+code::object.propertyName:: as getters and setters. The second argument to the setter is the entity
+who caused the change, almost always the caller in case of a verb. code::object.freq_(440, caller):: says the
+cat's freq property is now 400, set by the caller. If you're not sure who the changer is, it's safe to
+say it's the caller.

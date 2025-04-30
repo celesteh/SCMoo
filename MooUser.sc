@@ -245,7 +245,7 @@ MooRoot : MooPlayer {
 
 MooPlayer  : MooContainer {
 
-	classvar >generic;
+	//classvar >generic;
 	var  ownedObjects, <>user, <me, <permissions;
 
 	*new { |moo, name, user, self=false|
