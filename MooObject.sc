@@ -54,15 +54,56 @@ MooObject : NetworkGui  {
 
 	restore{|dict, converter, imoo |
 
-		var json_id, name, parent, json_owner, owner_id, superID, props, public, key, value, verbs, verb;
+		var json_id, parent, json_owner, owner_id, superID, props, public, key, value, jverbs, verb,
+		getObj;
 
-		"restore".debug(this);
+		"restore %".format(dict).debug(this);
 
 		moo = imoo ? Moo.default;
+
+		getObj = {|key|
+
+			var oid, obj, j_obj;
+
+			j_obj = dict.atIgnoreCase(key);
+
+			"restore: Is in dict? %".format(j_obj).debug(this.id);
+
+			j_obj.notNil.if({
+				(j_obj.asString != "null").if({
+					"not null %".format(j_obj).debug(this);
+					//oid = converter.getIDFromRef(j_obj, moo);
+					oid = this.class.refToObject(j_obj, converter, moo);
+					"id %".format(oid).debug(this);
+					oid.notNil.if({ j_obj = oid });
+					(j_obj.asString.stripWhiteSpace == id.asString.stripWhiteSpace).if({
+						obj = this;
+					}, {
+						j_obj.respondsTo(\id).if({
+							(j_obj.id.asString.stripWhiteSpace == id.asString.stripWhiteSpace).if({
+								obj = this;
+							});
+						});
+					});
+				}, {
+					//obj = this
+				});
+			}, {
+				//obj = this;
+			});
+			//obj.isNil.if({ obj = j_obj ? oid ? key });
+
+			obj = obj ? j_obj? oid ? key;
+
+			obj;
+		};
 
 		moo.notNil.if({
 
 			super.make_init(moo.api, nil, {});
+
+			// <moo,  owner, <id, <aliases, verbs, location,  <properties, <>immobel, superObj;
+
 
 			aliases = [];
 			verbs = IdentityDictionary();
@@ -73,47 +114,60 @@ MooObject : NetworkGui  {
 
 
 			name = dict.atIgnoreCase("name");
+			"name %".format(name).debug(this);
 			id = dict.atIgnoreCase("id");
-			id = moo.add(this, name, this.id);
+			"id %".format(id).debug(this);
+			id = moo.add(this, name, id);
 
-			// sort out owner
-			json_owner = dict.atIgnoreCase("owner");
-			json_owner.notNil.if({
-				(json_owner.asString != "null").if({
-					owner_id = converter.getIDFromRef(json_owner, moo);
-					owner_id.notNil.if({ json_owner = owner_id });
-					(json_owner.asString.stripWhiteSpace == id.asString.stripWhiteSpace).if({
-						owner = this;
+
+			owner = getObj.value("owner");
+			owner = owner ? this; // if it's nil, we own ourselves
+
+			"owner % %".format(owner).debug(this);
+
+			"-------------------------------------------------------------".debug("Restore Properties");
+
+			//  "properties" : [ { "parent" : 8521, "public" : false },  etc ]
+			props = dict.atIgnoreCase("properties");
+			props.do({|prop|
+				// each property is a dictionary, with two keys
+
+				// first find out if it's public
+				public = prop.atIgnoreCase("public");
+				public = public.asBoolean;
+
+				// now go through the keys
+				prop.keys.do({|key|
+					// publish the keys (not counting public)
+					(key.asString.compare("public", true) != 0).if({
+						value = prop.atIgnoreCase(key);
+
+						"restore: key % value %".format(key, value).debug(this.id);
+
+						// does the vlaue refer to a MooObject?
+						value= getObj.(value);//MooObject.mooObject(value, moo);
+						value.isKindOf(MooObject).if({
+							value = value.id;
+						});
+
+						// the changer is the JSON thingee
+						this.property_(key.asSymbol, value, public, converter);
+
+						"key % value % public % (is a %)".format(key, value, public, public.class).debug(this.class);
 					});
-				}, {
-					owner = this
 				});
-			}, {
-				owner = this;
 			});
-			owner.isNil.if({ owner = json_owner ? owner_id });
 
-			// sort out parent
-			parent =  this.class.refToObject(dict.atIgnoreCase("parent")) ?
-			{"parent not found".warn; moo.genericObject}.value;
+			name = this.property(\name).value;
+			parent = this.class.refToObject(this.property(\parent).value, converter, moo);
+			parent = parent ? moo.genericObject;
 			this.pr_superObj_(parent);
 
 
-			props = dict.atIgnoreCase("properties");
-			props.do({|prop|
-				// each property is a dictionary
-				public = prop.atIgnoreCase("public");
-				prop.keys.do({|key|
-					(key.asString.compare("public", true) != 0).if({
-						value = prop.atIgnoreCase(key);
-						this.property_(key.asSymbol, value, public, this);
-					});
-				});
-			});
 
-			verbs = dict.atIgnoreCase("verbs");
-			verbs.do({|json_verb|
-				verb = MooVer.fromJSON(json_verb, converter, moo, this);
+			jverbs = dict.atIgnoreCase("verbs");
+			jverbs.do({|json_verb|
+				verb = MooVerb.fromJSON(json_verb, converter, moo, this);
 				key = verb.verb;
 				this.prValidID(key).not.if({
 					MooError("Verbs must start with a letter and not cotnain special characters").throw;
@@ -125,12 +179,17 @@ MooObject : NetworkGui  {
 			aliases = aliases ++ dict.atIgnoreCase("aliases").collect({|a| a.asSymbol });
 			immobel = dict.atIgnoreCase("immobel");
 
+			"MooObject.restore done".debug(this);
+
 		});
 	}
 
 	restored {
 
 		// call after moo restoration has finished
+		this.pr_superObj_(MooObject.mooObject(superObj, moo));
+		location = MooObject.mooObject(location, moo);
+		owner =  MooObject.mooObject(owner, moo);
 
 	}
 
@@ -351,23 +410,28 @@ MooObject : NetworkGui  {
 	}
 
 	*refToObject{|obj, converter, moo|
-		var id, json_obj;
+		var id, found_obj;
 		//owner =  dict.atIgnoreCase("owner");
+
+		"refToObject %".format(obj).debug(this);
+
 		obj.isNil.if({
 			^nil
 		});
 
-		id = converter.getIDFromRef(obj);
-		id.notNil.if({
-			obj = moo.at(id);
-		}, {
-			//json_obj = moo.at(obj);
-			//json_obj.notNil.if({
-			//	obj = json_obj;
-			//});
-			obj = this.mooObject(obj, moo);
+		converter.notNil.if({
+			id = converter.getIDFromRef(obj);
+			//"got an id %".format(id).debug(this);
 		});
-		^obj;
+
+		id = id ? obj; // if we have an ID, use it
+
+		//"id is %".format(id).debug(this);
+
+		found_obj = this.mooObject(id, moo);
+
+		// if we found something, return it
+		^(found_obj ? id);
 	}
 
 	// obj could be a moo object or an ID string and we don't know which
@@ -490,33 +554,30 @@ MooObject : NetworkGui  {
 
 		var shared;
 
-		//key.isKindOf(SimpleNumber).if({
-		//	MooError("Property can't be a number").throw;
 		this.prValidID(key).not.if({
 			MooError("Property must start with a letter and not contain special characters").throw;
 		});
 
 		key = key.asSymbol;
 
-		//"property_ % %".format(key, ival).postln;
+		"property_ % %".format(key, ival).debug(this.class);
+
+		//"verbs %".format(verbs).debug(this);
 
 		verbs.includesKey(key).if({
 			MooError("% name already in use by %".format(key, this.name)).throw;
 		});
 
+
+		//"properties %".format(properties).debug(this);
+
 		properties.includesKey(key).if({
 			// overwrite. Send notification
-			//properties.at(key).value_(ival, changer);
+			"overwrite %".format(key).debug(this.id);
 			shared = properties.at(key);
 			shared.value_(ival, changer);
 		}, {
 
-			//shared = SharedResource(ival);
-			//"shared %".format(shared.value).postln;
-			//properties.put(key, shared);
-			//publish.if({
-			//	playableEnv.addShared("%/%".format(key, id).asSymbol, shared);
-			//});
 			publish.if({
 				shared = this.addShared(this.formatKey(key), ival);
 			} , {
@@ -527,7 +588,9 @@ MooObject : NetworkGui  {
 		});
 
 		//properties.keys.postln;
-		//"saved as %".format(properties[key].value).postln;
+		"saved as % & % & %".format(properties[key].value, shared, this.perform(key).value).debug(this.id);
+		this.name;
+		properties.debug(this.id);
 
 		^shared;
 	}
@@ -605,6 +668,8 @@ MooObject : NetworkGui  {
 	doesNotUnderstand { arg selector ... args;
 		var verb, property, func, ret;
 
+		"doesNotUnderstand %".format(selector).debug(this.id);
+
 		//this.dumpBackTrace;
 
 		selector = selector.asSymbol;
@@ -614,11 +679,6 @@ MooObject : NetworkGui  {
 		});
 
 		// first try moo stuff
-		//"..\ndoesNotUnderstand %".format(selector).debug(this.id);
-		//verbs.keys.postln;
-		//properties.keys.postln;
-		//"..".postln;
-
 		verb = this.getVerb(selector);//verbs[selector];
 		if (verb.notNil) {
 
@@ -626,7 +686,7 @@ MooObject : NetworkGui  {
 			^verb.invoke(args[0], args[1], args[2], args[3]);
 		};
 
-		"% is not a verb".format(selector).debug(this);
+		"% is not a verb".format(selector).debug(this.id);
 		verbs.keys.postln;
 
 		if (selector.isSetter) {
@@ -662,11 +722,11 @@ MooObject : NetworkGui  {
 
 		property = this.property(selector);//properties[selector];
 		property.notNil.if({
-			"porperty % %".format(selector, property.value).postln;
+			"porperty % %".format(selector, property.value).debug(this.id);
 			^property.value;
 		});
 
-		"not a property".postln;
+		"not a property".debug(this.id);
 		properties.keys.postln;
 
 		^nil;
@@ -1100,20 +1160,30 @@ MooContainer : MooObject {
 
 		var json_contents;
 
-		semaphore = Semaphore(1);
+		"containerRestore".debug(this);
+
+		semaphore = semaphore ? Semaphore(1);
 		contents = [];
 
 
-		json_contents = dict.atIgnoreCase("properties");
-		contents = contents ++ json_contents.collect({|item| this.refToObject(item, converter, moo) });
+		json_contents = dict.atIgnoreCase("contents");
+		"contents %".format(contents).debug(this);
+		contents = contents ++ json_contents.collect({|item| this.class.refToObject(item, converter, moo) });
 	}
 
 
 	restored {
+		super.restored;
 
 		semaphore.wait;
-		contents.do({|item|
+		contents = contents.collect({|item|
+
+			// in case we just have an ID
+			item = this.class.mooObject(item, moo);
+			"taking names %".format(item.name).debug(this);
+
 			this.put(item.name.asSymbol, item);
+			item;
 		});
 		semaphore.signal
 
@@ -1141,6 +1211,8 @@ MooRoom : MooContainer {
 
 		var json_exits, key, value;
 
+		"roomRestore".debug(this);
+
 		//semaphore = Semaphore(1);
 		players = [];
 		//contents = [];
@@ -1148,7 +1220,7 @@ MooRoom : MooContainer {
 
 		//departures = exits.keysValuesDo({|key, val| "{ \"key\": \"%\", \"val\": %}".format(key, val !? {val.id} ? "null") }).asList;
 
-		json_exits = dict.atInoreCase("exits");
+		json_exits = dict.atIgnoreCase("exits");
 		json_exits.do({|item|
 			key = item.atIgnoreCase("key");
 			value = item.atIgnoreCase("val");
@@ -1340,12 +1412,17 @@ MooRoom : MooContainer {
 		"\"owner\": % ".format(owner !? {owner.id} ? "null")
 		*/
 
-		var stuff, departures;
+		var stuff, departures, val;
 
 		//"exits %".format(exits.keys).debug(this);
 
 		//stuff = contents.collect({|c| c !? { c.id } ? "null" });
-		departures = exits.keysValuesDo({|key, val| "{ \"key\": \"%\", \"val\": %}".format(key, val !? {val.id} ? "null") }).asList.join(", ");
+		departures = exits.keys.collect({|key|
+			val = exits.at(key);
+			"{ \"key\": \"%\", \"val\": %}".format(key, val !? {val.id} ? "null")
+		}).asList.join(", ");
+
+		"departures %".format(departures).debug(this);
 
 		^super.pr_JSONContents(converter) +
 		//",\"contents\":  % ," .format(converter.convertToJSON(stuff)/*stuff.join(", ")*/) +

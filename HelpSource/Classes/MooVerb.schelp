@@ -39,6 +39,11 @@ The MooObject to which this verb is attached
 ARGUMENT:: publish
 A boolean. If True, the verb can be invoked via OSC message. This is useful if the verb includes audio.
 
+ARGUMENT:: owner
+The writer of the verb. This would normally only be specified if a wizard added a verb to somebody's object. The verb will act at the owner's permissions.
+
+ARGUMENT:: moo
+The moo object, also optional since the object refers to the moo.
 
 
 INSTANCEMETHODS::

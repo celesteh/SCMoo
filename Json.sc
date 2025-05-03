@@ -28,25 +28,32 @@ MooCustomDecoder {
 
 		var jsonClass;
 
+		//"value".debug(this);
+
 		input.isNil.if({
+			//"no input".debug(this);
+			//this.dumpStack;
+			//this.dumpBackTrace;
 			Error("No Input!!").throw;
 		});
 
-		"running the decoder, converter is %, input is %, which is a %,  class is % moo is %".format(converter, input,input.class, class, moo).debug(this);
+		//"input is not nil".debug(this);
+
+		//"running the decoder, converter is %, input is %, which is a %,  class is % moo is %".format(converter, input,input.class, class, moo).debug(this);
 		/*
 		item.notNil.if({
-			item.respondsTo(\fromJSON).if({
-				"toJson incoming".debug(this);
-				^item.fromJSON(converter)
-			});
+		item.respondsTo(\fromJSON).if({
+		"toJson incoming".debug(this);
+		^item.fromJSON(converter)
+		});
 		});
 		^nil
 		*/
 
 		input.isKindOf(Dictionary).if({
-			input.atIgnoreCase("class").postln;
+			input.atIgnoreCase("class").debug(this);
 			class = class ? input.atIgnoreCase("class");
-			"class is %, a kind of %".format(class, class.class).debug(this);
+			//"class is %, a kind of %".format(class, class.class).debug(this);
 
 		});
 
@@ -54,7 +61,7 @@ MooCustomDecoder {
 		class.notNil.if({
 			jsonClass = class.asSymbol.asClass;
 
-			jsonClass.findRespondingMethodFor(\fromJSON).notNil.if({
+			jsonClass.respondsTo(\fromJSON).if({
 				"Send it to the class % with converter %".format(class, converter).debug(this);
 				^jsonClass.fromJSON(input, converter, moo);
 			});
@@ -102,7 +109,7 @@ MooJSONConverter : JSONlib {
 			useEvent: useEvent
 		).moo_(moo);
 
-		"convertToSC".debug(converter);
+		//"convertToSC".debug(converter);
 		raw = converter.prConvertToSC(json.parseJSON);
 		^converter.restoreMoo(raw);
 	}
@@ -114,17 +121,25 @@ MooJSONConverter : JSONlib {
 	//filePath, customDecoder=nil, useEvent=true, postWarnings=true, moo
 	*parseFile {|filePath, customDecoder=nil, useEvent=true, postWarnings=true, moo|
 		var converter, pre_raw, raw;
-				customDecoder = customDecoder ? MooCustomDecoder();
+
+		"parseFile".debug(this);
+
+		customDecoder = customDecoder ? MooCustomDecoder();
 		converter = this.new(
 			postWarnings,
 			customDecoder: customDecoder,
 			useEvent: useEvent
 		).moo_(moo);
-		"parseFile".debug(converter);
+		//"parseFile".debug(converter);
+
 		pre_raw = filePath.parseJSONFile;
-		"pre_raw is %".format(pre_raw).debug(converter);
+
+		// this is a fuck up. Is this just a JSON string?
+
+
+		//"pre_raw is %".format(pre_raw).debug(converter);
 		raw = converter.prConvertToSC(pre_raw);
-		"parseFile raw %".format(raw).debug(converter);
+		//"parseFile raw %".format(raw).debug(converter);
 		^converter.restoreMoo(raw);
 	}
 
@@ -355,9 +370,9 @@ MooJSONConverter : JSONlib {
 
 	prConvertToSC { |v|
 		var res, val;
-		"prConvertToSC v is %".format(v).debug(this);
+		//"prConvertToSC v is %".format(v).debug(this);
 		if(customDecoder.notNil) {
-			"We have a decoder".debug(this);
+			//"We have a decoder".debug(this);
 			//input, converter, class, moo
 			//value {|input, converter, class, moo|
 			val = customDecoder.value(v, this, nil,  moo);
@@ -376,13 +391,17 @@ MooJSONConverter : JSONlib {
 	getIDFromRef{|dict, moo|
 		var type, id;
 
-		type = dict.atIgnoreCase("type");
-		type.notNil.if({
-			id = dict.atIgnoreCase("id");
-			^id;
-		});
+		dict.isKindOf(Dictionary).if({
+			type = dict.atIgnoreCase("type");
+			type.notNil.if({
+				id = dict.atIgnoreCase("id");
+				^id;
+			});
 
-		^nil
+			^nil
+		});
+		// wrong type, do nothing
+		^dict;
 	}
 
 	restoreMoo{|obj, moo|
@@ -403,14 +422,20 @@ MooJSONConverter : JSONlib {
 				//	id = obj.atIgnoreCase("id");
 				id = this.getIDFromRef(obj, moo);
 				id.notNil.if({
-					object = moo.at(id.asSymbol);
+					object = moo.at(id);
 					object.notNil.if({
 						^object;
 					});
 					^id;
 				});
 			});
+			// neither a class nor a reference
+			"Something has gone wrong in MooJSONConverter:restoreMoo".warn;
 		}, {
+			obj.isKindOf(String).if({
+				//"its a string %".format(obj).debug(this);
+				^obj
+			});
 			obj.isKindOf(Collection).if({ // a dictionary is a kind of a collection!
 
 				^obj.collect({|o| this.restoreMoo(o, moo); });
@@ -476,6 +501,10 @@ MooJSONConverter : JSONlib {
 		^this.copyRange(start, end);
 	}
 
+	asBoolean {
+
+		^(this.asString.compare("true", true) == 0)
+	}
 
 }
 
@@ -567,13 +596,13 @@ MooJSONConverter : JSONlib {
 				});
 
 				index = best;
-							index.debug(this);
-			output = this.associationAt(index);
-			output.key.isNil.if({
-				output = this.associationAt(index.asSymbol)
-			});
-			//^( ? this.associationAt(index.asSymbol));
-			^output.value;
+				//index.debug(this);
+				output = this.associationAt(index);
+				output.key.isNil.if({
+					output = this.associationAt(index.asSymbol)
+				});
+				//^( ? this.associationAt(index.asSymbol));
+				^output.value;
 
 			});
 		});

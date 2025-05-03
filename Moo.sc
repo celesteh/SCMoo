@@ -2,25 +2,77 @@ Moo {
 	classvar <>default;
 	var index, objects, users, <api, <semaphore, <pronouns, <host, <>lobby, <me, <generics;
 
-	*new{|netAPI, json, loadType|
-		^super.new.load(netAPI, json, loadType)
+	*new{|netAPI, json, loadType, isHost=true|
+		^super.new.load(netAPI, json, loadType, isHost)
 	}
 
 	*login{|netAPI|
 		^super.new.init_remote(netAPI)
 	}
 
-	*bootstrap {|api, json, loadType|
-		var doc, moo;
+	*bootstrap {|api, json, loadType, isHost=true|
+		var doc, moo, startGui;
 
 		//doc = Document();
 
-		moo = Moo(api, json, loadType);
+		startGui = json.isNil;
+
+		moo = Moo(api, json, loadType, isHost);
+
+		startGui.if({
+			AppClock.sched(0, {
+				//doc = TextView.new(Window.new("", Rect(100, 100, 600, 700)).front, Rect(0, 0, 600, 700)).resize_(5);
+
+				//moo.me.me = true;
+				//moo.me = moo.me ? moo.at(0);
+				moo.login(moo.me ? 0);
+				"moo.me %".format(moo.me.class).debug(this);
+				moo.me.me = true;
+				moo.gui({
+					moo.lobby.arrive(moo.me,moo.lobby, moo.me, moo.lobby);
+
+				});
+
+				nil;
+			});
+		});
+
+		//api.dump;
+
+		^moo
+	}
+
+	*fromJSON{|json, api, loadType, isHost=true|
+		var arg1, arg2;
+		var moo, player;
+
+		// there's a reason I was worried about passing arguments in the wrong order
+		arg1 = json; arg2 = api;
+		arg1.isKindOf(NetAPI).if({
+			api = arg1;
+			json = arg2;
+		});
+
+		default.notNil.if({
+			moo = default;
+			moo.fromJSON(json);
+		} , {
+
+			moo = Moo(api, json, loadType, isHost);
+
+			//moo.me = moo.user(api.nick);//moo.users.atIgnoreCase(api.nick);
+			//moo.me.isNil.if({
+			//	moo.me = MooPlayer(moo, api.nick, nil, true);
+			//});
+			moo.login(api.nick);
+
+		});
 
 		AppClock.sched(0, {
-			//doc = TextView.new(Window.new("", Rect(100, 100, 600, 700)).front, Rect(0, 0, 600, 700)).resize_(5);
 
-			//moo.me.me = true;
+			moo.login(moo.me ? 0);
+			moo.me.me = true;
+
 			moo.gui({
 				moo.lobby.arrive(moo.me,moo.lobby, moo.me, moo.lobby);
 
@@ -29,28 +81,15 @@ Moo {
 			nil;
 		});
 
-		api.dump;
+		//api.dump;
 
 		^moo
-	}
 
-	*fromJSON{|json, api, loadType|
-		var order;
-		json.isKindOf(NetAPI).if({
-			order = api;
-			api = json;
-			json = order;
-		});
-
-		default.notNil.if({
-			^default.fromJSON(json);
-		});
-
-		^this.bootstrap(api, json, loadType)
 	}
 
 
-	*load{|json, api|
+	*load{|json, api, loadType = \parseFile, isHost=true|
+		/*
 		// there's a reason I was worried about passing arguments in the wrong order
 		var arg1, arg2;
 		arg1 = json; arg2 = api;
@@ -63,7 +102,9 @@ Moo {
 			^default.fromJSON(json, \parseFile);
 		});
 
-		^this.bootstrap(api, json, \parseFile)
+		//^this.bootstrap(api, json, \parseFile)
+		*/
+		^this.fromJSON(json, api, loadType, isHost);
 	}
 
 
@@ -87,7 +128,7 @@ Moo {
 	}
 
 
-	load {|net, json, loadType|
+	load {|net, json, loadType, isHost=true|
 
 		var root, user_update_action;
 
@@ -102,10 +143,16 @@ Moo {
 		users = IdentityDictionary();
 		generics = Dictionary();
 
-		host = true;
+		host = isHost;
+
+		net.silence = isHost.not; // Don't advertise everything unless we're in charge
 
 		json.notNil.if({
 			this.fromJSON(json, nil, nil, loadType);
+			(objects.size==0).if({
+				"Program should halt".debug(this);
+				Error("Load failed").throw;
+			});
 		});
 
 		((objects.size == 0) || (json.isNil)).if({
@@ -149,7 +196,7 @@ Moo {
 			//generics[MooContainer] = generics[\container];
 
 			"make a generic player".debug(this);
-			generics[\player] = MooPlayer(this, "player", nil);
+			generics[\player] = MooPlayer(this, "player", nil, false, generics[\container]);
 			//generics[MooPlayer] = generics[\player];
 			"made generic player, %".format(generics[\player].name).debug(this);
 			//genericPlayer.dump;
@@ -289,12 +336,53 @@ Moo {
 
 	}
 
+	login {|player|
+
+		var oldme;
+
+		this.host.if({
+
+			oldme = me;
+
+			player.isKindOf(NetAPI).if({
+				me = this.user(player.nick);//moo.users.atIgnoreCase(api.nick);
+				me.isNil.if({
+					me = MooPlayer(this, player.nick, nil, true);
+				});
+			}, {
+				player.isKindOf(MooPlayer).if({
+					me = player;
+				} , {
+					// something else
+					me = this.user(player)
+				});
+			});
+
+			me.notNil.if({
+				oldme.isKindOf(MooPlayer).if({
+					oldme.me = false;
+				});
+				me. me = true;
+			});
+		}, {
+			// not yet written, but probably an auotmatic effect of NetAPI
+		});
+
+		^me;
+	}
+
+
+
 
 	add { |obj, name, id|
 
 		var obj_index, should_add, count;//= true;
 
+		"add".debug(this);
+
 		semaphore.wait;
+
+		"waited".debug(this);
 
 		obj.isKindOf(MooRoot).if({
 			id = 0;
@@ -398,6 +486,26 @@ Moo {
 		//index = index.asSymbol;
 
 		^objects.at(ind);
+	}
+
+	user {|who| // find a player
+
+		var player;
+
+		who = who.asString;
+
+		player = users.atIgnoreCase(who.asSymbol);
+		(player.isNil && who.isDecimal).if({
+			player = this.at(who.asInteger);
+
+			player.notNil.if({
+				player.isKindOf (MooPlayer).not.if({
+					player = nil
+				})
+			});
+		});
+
+		^player
 	}
 
 	genericObject {
@@ -520,7 +628,7 @@ Moo {
 
 	toJSON{|converter|
 
-		var encoder, synths, json_generics, reserved, obs;
+		var encoder, synths, json_generics, reserved, obs, jlobby;
 
 		converter.isNil.if({
 			encoder = MooCustomEncoder();
@@ -540,14 +648,12 @@ Moo {
 		json_generics = "\"Generics\" : [ % ]".format(json_generics);
 
 		reserved = "\"Reserved\": % ".format(converter.convertToJSON(MooParser));
+		jlobby = "\"Lobby\": % ".format(converter.prConvertToJson(lobby));
 
 		obs = "\"Objects\": % ".format(converter.convertTree(objects, this));
 
-		^"{\n\"class\": \"Moo\",\n%,\n%,\n%,\n%\n}\n".format(
-			obs,
-			synths,
-			json_generics,
-			reserved
+		^"{\n\"class\": \"Moo\",\n%\n}\n".format(
+			[obs, synths, json_generics, reserved, jlobby].join(",\n")
 		);
 	}
 
@@ -557,25 +663,36 @@ Moo {
 
 		var decoder, objs, json_generics, ref, reserved, key, value;
 
+		// dont' advertise stuff we're loading
+		api.silence = true;
+
 		loadType = loadType ? \parseFile;
 
 		"fromJSON % converter % %".format(loadType, converter, obj).debug(this);
+		//obj.atIgnoreCase("Objects").debug(this);
 
 		obj.isKindOf(String).if({
 			"its' a string".debug(this);
 			decoder = MooCustomDecoder();
-			{
-				^MooJSONConverter.perform(loadType, obj, decoder, false, true, this);
-			}.try ({
-				^MooJSONConverter.convertToSC( obj, decoder, false, true, this);
+			(loadType != \parseText).if({
+				File.exists(obj).if({
+					^MooJSONConverter.parseFile(obj, decoder, false, true, this);
+				});
+				"File % does not exist".format(obj).warn;
 			});
+			// It must be a string of JSON
+			^MooJSONConverter.convertToSC( obj, decoder, false, true, this);
 		});
+
 
 		"fromJSON not recursing".format(obj).debug(this);
 
-		semaphore.wait;
+		//semaphore.wait;
+
+		//"waited".debug(this);
 
 		obj.isKindOf(Dictionary).if({
+
 
 			converter.isNil.if({
 				decoder = MooCustomDecoder();
@@ -585,19 +702,23 @@ Moo {
 			// First grab all the objects
 
 			objs = obj.atIgnoreCase("Objects");
-			objs = converter.restoreMoo(objects, this);
-			//objects = objects.sort({|a, b|
-			//	a.atIgnoreCase("index").asInteger < b.atIgnoreCase("index").asInteger
-			//});
-			//objects = Array(objects.last.atIgnoreCase("index").asInteger+1);  // allocate the right size array
+			//objs.debug(this);
+			objs = converter.restoreMoo(objs, this);
 
 			// put everything back at the right index
 			//objects.do({|o|
 			//	objects[o.atIgnoreCase("index").asInteger] = o;
 			//});
-			objs.do({|o|
-				objects.put(o.id.asSymbol, o);
-			});
+			//objs.do({|o|
+				//objects.put(o.id, o);
+				//"Restoring %".format(o.id).debug(this);
+				//this.add(o, o.name, o.id);
+			//});
+
+			// make sure all objects are actually restored
+			semaphore.wait;
+			objects = objects.collect({|o| MooObject.mooObject(o, this) });
+			semaphore.signal;
 
 			// Then get the generics
 			json_generics =  obj.atIgnoreCase("Generics");
@@ -628,23 +749,29 @@ Moo {
 
 
 			// anything we've shoved in the parser.
+			//"Now reserved words".debug(this);
+
 			reserved = obj.atIgnoreCase("Reserved");
+			//reserved.debug(this);
+
 			MooParser.fromJSON(converter, this, reserved);
 
 			// finally, the synthdefs, which idk
+			//"synthdefs go here".debug(this);
 
+			lobby = MooObject.refToObject(obj.atIgnoreCase("Lobby"), converter, this);
 
 			converter.finish;
 
 		});
 
 
-		semaphore.signal;
+		//semaphore.signal;
 
 
 
 		//^"{ \"class\": \"Moo\", \n\"Contents\": % }\n".format(converter.prConvertTree(objects));
-
+		api.silence =false;
 
 	}
 

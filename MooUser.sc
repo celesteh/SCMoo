@@ -68,7 +68,7 @@ MooPermission {
 
 		input = input ? level;
 
-		input.isKindOf(SimpleNumer).not.if({
+		input.isKindOf(SimpleNumber).not.if({
 			output = MooPermission.at(input.asSymbol);
 		}, {
 			output = input;
@@ -248,7 +248,7 @@ MooPlayer  : MooContainer {
 	//classvar >generic;
 	var  ownedObjects, <>user, <me, <permissions;
 
-	*new { |moo, name, user, self=false|
+	*new { |moo, name, user, self=false, parent|
 		var uname;
 
 		//"MooPlayer.new".postln;
@@ -258,8 +258,15 @@ MooPlayer  : MooContainer {
 			uname = uname ? moo.api.nick;
 		});
 		//*new { |moo, name, maker, parent|
+		parent = this.generic(moo) ? parent;
 
-		^super.new(moo, uname, \this, this.generic(moo)).initPlayer(user, self);
+		^super.new(moo, uname, \this, parent).initPlayer(user, self);
+	}
+
+
+	*fromJSON{|dict, converter, moo|
+		"fromJSON MooPlayer".debug(this);
+		^super.fromJSON(dict, converter, moo).playerRestore(dict, converter, moo);
 	}
 
 	initPlayer {|iuser, self=false|
@@ -463,6 +470,31 @@ MooPlayer  : MooContainer {
 
 		"ok, we got the MooUSer: %".format(str).debug(this);
 		^str;
+	}
+
+	playerRestore {|dict, converter, moo|
+		//		json_contents = dict.atIgnoreCase("contents");
+		//"contents %".format(contents).debug(this);
+		//contents = contents ++ json_contents.collect({|item| this.refToObject(item, converter, moo) });
+
+		var json_owned, perms;
+
+		"playerRestore".debug(this);
+
+
+		semaphore = semaphore ? Semaphore(1);
+
+		json_owned = dict.atIgnoreCase("owned");
+		perms = dict.atIgnoreCase("permission");
+
+		semaphore.wait;
+
+		ownedObjects = [] ++ json_owned.collect({|item| this.class.refToObject(item, converter, moo) });
+		permissions = MooPermission.fromJSON(perms, converter);
+
+		semaphore.signal;
+
+		"owned %".format(ownedObjects).debug(this);
 	}
 
 }

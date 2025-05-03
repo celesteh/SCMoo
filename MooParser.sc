@@ -11,7 +11,9 @@ MooParser {
 	}
 
 	*reserveWord{|key, object| // optionally tie the word to a thing
+		"reserveWord".debug(this);
 		reservedWords = reservedWords.put(key.asSymbol, object);
+		reservedWords.debug(this);
 	}
 
 	*reservedWord{|key|
@@ -30,8 +32,15 @@ MooParser {
 
 	*fromJSON{|converter, moo, dict|
 
+		var item;
+
 		dict.keys.do({|key|
-			reserveWord(key.asSymbol, converter.restoreMoo(dict.at(key)));
+			"key %".format(key).debug(this);
+			"val %".format(dict.at(key)).debug(this);
+			item = converter.restoreMoo(dict.at(key));
+			"item %".format(item).debug(this);
+
+			this.reserveWord(key.asSymbol, item);
 		});
 	}
 
@@ -62,9 +71,9 @@ MooParser {
 
 		this.parse();
 
-		"parsed".postln;
+		//"parsed".postln;
 
-		"location % ".format(speaker.location).debug("MooParser init");
+		//"location % ".format(speaker.location).debug("MooParser init");
 
 		this.movement().not.if({
 			this.creation().not.if({
@@ -645,9 +654,9 @@ MooVerb{
 		^pass;
 	}
 
-	*fromJson{|dict, converter, moo, object|
+	*fromJSON{|dict, converter, moo, object|
 
-		var verb, dobj, iobj, func, obj, publish, owner, json_obj, id;
+		var verb, dobj, iobj, func, obj, publish, owner, json_obj, id, a;
 		//"{ \"verb\": \"%\", ".format(verb) +
 		//"\"args\": [\"%\", \"%\"],".format(dobj, iobj) +
 		//"\"func\": %, ".format(converter.convertToJSON(func)) +
@@ -661,12 +670,13 @@ MooVerb{
 		publish = dict.atIgnoreCase("published");
 
 		obj =  dict.atIgnoreCase("obj");
-		obj = MooObject.refToObject(obj);
+		"obj %".format(obj).debug(this);
+		obj = MooObject.refToObject(obj, converter, moo);
 
 		owner =  dict.atIgnoreCase("owner");
-		owner = MooObject.refToObject(owner);
+		owner = MooObject.refToObject(owner, converter, moo);
 
-		^this.new(verb.asSymbol, dobj.asSymbol, iobj.asSymbol, object, publish, owner, moo);
+		^this.new(verb.asSymbol, dobj.asSymbol, iobj.asSymbol, func, object, publish.asBoolean, owner, moo);
 	}
 
 	*new {|verb, dobj, iobj, func, obj, publish, owner, moo|
@@ -681,10 +691,11 @@ MooVerb{
 
 	init{ arg publish = false, moo;
 
-		var name, id = MooObject.id(obj);
+		var name, id;
 
 		owner = owner ? obj.owner;
 		moo = moo ? obj.moo;
+		id = MooObject.id(obj, moo);
 		obj.isKindOf(MooObject).if({ name = obj.name }, { name = id });
 
 
