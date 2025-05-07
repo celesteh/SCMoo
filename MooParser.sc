@@ -11,9 +11,9 @@ MooParser {
 	}
 
 	*reserveWord{|key, object| // optionally tie the word to a thing
-		"reserveWord".debug(this);
+		//"reserveWord".debug(this);
 		reservedWords = reservedWords.put(key.asSymbol, object);
-		reservedWords.debug(this);
+		//reservedWords.debug(this);
 	}
 
 	*reservedWord{|key|
@@ -35,10 +35,10 @@ MooParser {
 		var item;
 
 		dict.keys.do({|key|
-			"key %".format(key).debug(this);
-			"val %".format(dict.at(key)).debug(this);
+			//"key %".format(key).debug(this);
+			//"val %".format(dict.at(key)).debug(this);
 			item = converter.restoreMoo(dict.at(key));
-			"item %".format(item).debug(this);
+			//"item %".format(item).debug(this);
 
 			this.reserveWord(key.asSymbol, item);
 		});
@@ -86,13 +86,13 @@ MooParser {
 
 		var place, matched = false;
 
-		"movement".debug(this);
+		//"movement".debug(this);
 
 		dobj.isNil.if({
 			actor.location.notNil.if({
 				place = actor.location.exit(verb);
 				place.notNil.if({
-					"move".debug(this);
+					//"move".debug(this);
 					{ actor.move(place); }.fork;
 					matched = true
 				});
@@ -105,7 +105,7 @@ MooParser {
 
 		var thing, matched = false, index, switch, clone;
 
-		"creation".postln;
+		//"creation".postln;
 
 		(verb.asString.toLower.asSymbol == \make).if({
 
@@ -144,7 +144,7 @@ MooParser {
 				};
 
 				matched = switch.(dobj.toLower.asSymbol, iobj);
-				"matched %".debug(this);
+				//"matched %".debug(this);
 				matched.not.if({
 					iobj.isNil.if({
 						matched = switch.(\object, dobj.asSymbol);
@@ -165,7 +165,7 @@ MooParser {
 				(iobj.isDecimal).if({
 					index= iobj.select({|c| c.isDecDigit }).asInteger;
 					//index = iobj.stripWhiteSpace.asInteger;
-					"% % iobj is % index is".format(iobj.class, iobj.isDecimal, iobj, index).debug(this);
+					//"% % iobj is % index is".format(iobj.class, iobj.isDecimal, iobj, index).debug(this);
 					(index > 0).if({
 						thing = actor.moo[index];
 					});
@@ -188,12 +188,12 @@ MooParser {
 
 		(verb.asString.toLower.asSymbol == \copy).if({
 
-			"copy".debug(this);
+			//"copy".debug(this);
 
 			(dobj.isDecimal).if({
 				index= dobj.select({|c| c.isDecDigit }).asInteger;
 				//index = iobj.stripWhiteSpace.asInteger;
-				"% % dobj is % index is".format(dobj.class, dobj.isDecimal, dobj, index).debug(this);
+				//"% % dobj is % index is".format(dobj.class, dobj.isDecimal, dobj, index).debug(this);
 				(index > 0).if({
 					clone = actor.moo[index];
 				});
@@ -216,7 +216,7 @@ MooParser {
 
 		var d_obj, i_obj, vfunc, found, object, sub_verb, called=false;
 
-		"verb: %".format(verb).postln;
+		//"verb: %".format(verb).postln;
 
 		// try to match the dobj to an object
 		dobj.notNil.if({
@@ -308,12 +308,12 @@ MooParser {
 			^true;
 
 		}, {
-			"not invoked".debug(this);
+			//"not invoked".debug(this);
 			sub_verb = this.reservedWord(verb);
-			"found % , a %".format(sub_verb, sub_verb.class).debug(this);
+			//"found % , a %".format(sub_verb, sub_verb.class).debug(this);
 
 			(sub_verb.isKindOf(String) || sub_verb.isKindOf(Symbol)).if({
-				"found a reserve".debug(this);
+				//"found a reserve".debug(this);
 				verb = sub_verb;
 				called = this.call;
 			});
@@ -347,7 +347,7 @@ MooParser {
 						//word = "\"";
 					});
 					word = "\"";
-					"started a string".debug(this)
+					//"started a string".debug(this)
 				});
 
 				inString = inString.not;
@@ -360,14 +360,14 @@ MooParser {
 			arr = arr.add(word);
 		});
 
-		arr.postln;
+		//arr.postln;
 
 		^arr;
 	}
 
 	isString {|token|
 
-		"isString".debug(this);
+		//"isString".debug(this);
 
 		^(token.beginsWith("\"") && token.endsWith("\""));
 
@@ -377,7 +377,7 @@ MooParser {
 
 		var assembled = [];
 
-		[arr, count].postln;
+		//[arr, count].postln;
 
 		arr.do({|item|
 			item.isKindOf(String).not.if({
@@ -444,7 +444,7 @@ MooParser {
 			//"flattened".postln;
 
 			//tokens.postln;
-			tokens.debug(this);
+			//tokens.debug(this);
 
 			verb = tokens[0];
 			(tokens.size > 1).if({ dobj = tokens[1]; });
@@ -453,7 +453,7 @@ MooParser {
 		});
 
 		//tokens.postln;
-		[verb, dobj, iobj].debug(this);
+		//[verb, dobj, iobj].debug(this);
 
 	}
 
@@ -506,7 +506,7 @@ MooParser {
 		(key.isKindOf(String) || key.isKindOf(Symbol)).if({
 			str = key.asString;
 			str.isDecimal.if({
-				"key %".format(key).debug(this);
+				//"key %".format(key).debug(this);
 				num = str.select({|c| c.isDecDigit }).asInteger;
 				obj = actor.moo.at(num);
 				obj.notNil.if({
@@ -572,7 +572,7 @@ MooParser {
 
 		//found.not.if.({ obj = key });
 
-		"key is % object is %".format(key, obj).debug(this);
+		//"key is % object is %".format(key, obj).debug(this);
 
 		^obj
 
@@ -670,7 +670,7 @@ MooVerb{
 		publish = dict.atIgnoreCase("published");
 
 		obj =  dict.atIgnoreCase("obj");
-		"obj %".format(obj).debug(this);
+		//"obj %".format(obj).debug(this);
 		obj = MooObject.refToObject(obj, converter, moo);
 
 		owner =  dict.atIgnoreCase("owner");
@@ -777,7 +777,7 @@ MooVerb{
 		this.pass(str).not.if({
 			MooReservedWordError("Verb contains disallowed commands", this.check(str)).throw;
 		});
-		str.postln;
+		//str.postln;
 		//"invoke".postln;
 		f = str.compile.value; // "{|a| a.post}".compile.value returns a function
 

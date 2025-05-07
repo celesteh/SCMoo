@@ -18,6 +18,8 @@ MooGUI : BileChat {
 
 		api.add("post/%".format(me.id).asSymbol, { arg id, str;
 
+			"Posting: %".format(str).debug(this);
+
 			AppClock.sched(0, {
 				(win.isClosed.not && exists).if ({
 					//disp.string = disp.string ++ "\n buh?";

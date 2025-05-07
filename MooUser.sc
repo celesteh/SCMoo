@@ -183,15 +183,15 @@ MooPermissionsError : MooError {}
 MooRoot : MooPlayer {
 
 	*new { |moo, name|
-		"MooRoot.new".postln;
+		//"MooRoot.new".postln;
 		name.postln;
 		^super.new(moo, name, nil, false).initRoot(moo, name);
 	}
 
 	initRoot {|moo, name|
 
-		"MooRoot init".postln;
-		name.postln;
+		//"MooRoot init".postln;
+		//name.postln;
 		moo.dump;
 
 		//moo = moo ? Moo.default;
@@ -273,7 +273,7 @@ MooPlayer  : MooContainer {
 
 		var pronouns;
 
-		"initPlayer".postln;
+		//"initPlayer".postln;
 
 		//(imoo.notNil || iname.notNil || iuser.notNil).if({
 
@@ -386,7 +386,9 @@ MooPlayer  : MooContainer {
 
 	postUser {|str, caller|
 
-		"in post".postln;
+		"postUsr: %".format(str).debug(this.id);
+
+		//"in post".postln;
 		// post is always local ARG NO IT's NOT . . . wait, is it? i don't fucking know....
 		//me.if({
 		//	str.postln;
@@ -457,7 +459,7 @@ MooPlayer  : MooContainer {
 
 		var str, stuff;
 
-		"MooPlayer.pr_JSONContents".debug(this);
+		//"MooPlayer.pr_JSONContents".debug(this);
 
 
 		//stuff = contents.collect({|c| c !? { converter.convertToJSON(c.id) } ? "null" }).asList;
@@ -468,7 +470,7 @@ MooPlayer  : MooContainer {
 		str = str + ", \"owned\":  % ," .format(converter.convertToJSON(ownedObjects)/*stuff.join(", ")*/);
 		str = str + "\"permission\": %".format(converter.convertToJSON(permissions));
 
-		"ok, we got the MooUSer: %".format(str).debug(this);
+		//"ok, we got the MooUSer: %".format(str).debug(this);
 		^str;
 	}
 

@@ -26,7 +26,7 @@ Moo {
 				//moo.me.me = true;
 				//moo.me = moo.me ? moo.at(0);
 				moo.login(moo.me ? 0);
-				"moo.me %".format(moo.me.class).debug(this);
+				//"moo.me %".format(moo.me.class).debug(this);
 				moo.me.me = true;
 				moo.gui({
 					moo.lobby.arrive(moo.me,moo.lobby, moo.me, moo.lobby);
@@ -89,21 +89,6 @@ Moo {
 
 
 	*load{|json, api, loadType = \parseFile, isHost=true|
-		/*
-		// there's a reason I was worried about passing arguments in the wrong order
-		var arg1, arg2;
-		arg1 = json; arg2 = api;
-		arg1.isKindOf(NetAPI).if({
-			api = arg1;
-			json = arg2;
-		});
-
-		default.notNil.if({
-			^default.fromJSON(json, \parseFile);
-		});
-
-		//^this.bootstrap(api, json, \parseFile)
-		*/
 		^this.fromJSON(json, api, loadType, isHost);
 	}
 
@@ -150,33 +135,27 @@ Moo {
 		json.notNil.if({
 			this.fromJSON(json, nil, nil, loadType);
 			(objects.size==0).if({
-				"Program should halt".debug(this);
+				//"Program should halt".debug(this);
 				Error("Load failed").throw;
 			});
 		});
 
 		((objects.size == 0) || (json.isNil)).if({
 
-			"json is nil".debug(this);
-			//moo.dump;
-			//api.dump;
-			//this.dump;
-
-			//hack = this;
+			//"json is nil".debug(this);
 
 			//ok, the roo ID is always \0
 
-			//MooObject(this, "dummy");
-			"make root".debug(this);
+			//"make root".debug(this);
 			root = MooRoot(this, "Root");
-			"made root".debug(this);
+			//"made root".debug(this);
 
 			generics[\object] = MooObject(this, "object", root, -1);
 			generics[\object].description_("You see nothing special.");
 			generics[\object].verb_(\get, \this, \none,
 				{|dobj, iobj, caller, object|
 
-					"get".debug(object);
+					//"get".debug(object);
 
 					object.immobel.not.if({
 
@@ -190,18 +169,12 @@ Moo {
 				}
 			);
 
-			//generics[MooObject] = generics[\object];
-			//MooParser.reserveWord(\object, genericObject);
 			generics[\container] = MooContainer(this, "bag", root, generics[\object]);
-			//generics[MooContainer] = generics[\container];
 
-			"make a generic player".debug(this);
+			//"make a generic player".debug(this);
 			generics[\player] = MooPlayer(this, "player", nil, false, generics[\container]);
-			//generics[MooPlayer] = generics[\player];
-			"made generic player, %".format(generics[\player].name).debug(this);
-			//genericPlayer.dump;
+			//"made generic player, %".format(generics[\player].name).debug(this);
 			root.parent = generics[\player];
-			//MooParser.reserveWord(\player, genericPlayer);
 
 
 			generics[\room] = MooRoom(this, "room", root, generics[\container]);
@@ -214,7 +187,7 @@ Moo {
 					caller.postUser(object.name.asString +"\n" + object.description.value);
 					(object == caller.location).if({
 						stuff = object.contents;
-						"stuff".debug(object);
+						//"stuff".debug(object);
 						(stuff.size > 0).if({
 							stuff = stuff.collect({|o| MooObject.mooObject(o, object.moo).name });
 							stuff = stuff.join(", ");
@@ -233,7 +206,7 @@ Moo {
 						});
 						exits = object.exits.keys.asList;
 						(exits.size == 1).if({
-							"one exit %".format(exits.first).debug(object);
+							//"one exit %".format(exits.first).debug(object);
 							caller.postUser("You can exit" + exits[0].asString);
 						}, {
 							(exits.size > 1).if({
@@ -287,7 +260,7 @@ Moo {
 							})
 						});
 						str.notNil.if({
-							str.debug(object);
+							//str.debug(object);
 							caller.postUser(str);
 						} , {
 							"Should not be nil".warn;
@@ -378,11 +351,11 @@ Moo {
 
 		var obj_index, should_add, count;//= true;
 
-		"add".debug(this);
+		//"add".debug(this);
 
 		semaphore.wait;
 
-		"waited".debug(this);
+		//"waited".debug(this);
 
 		obj.isKindOf(MooRoot).if({
 			id = 0;
@@ -426,7 +399,7 @@ Moo {
 
 			count = 0;
 			{objects[id].notNil}. while ({
-				"find an unused id, %".format(id).debug(this);
+				//"find an unused id, %".format(id).debug(this);
 				id = id + 1; //(id ++ count).asSymbol;
 			});
 
@@ -436,7 +409,7 @@ Moo {
 			//obj_index = objects.size;
 			//index = index + 1;
 			obj.isKindOf(MooPlayer).if({
-				"name is %".format(name).debug(obj);
+				//"name is %".format(name).debug(obj);
 				users.put(name, obj);
 			});
 		}, {
@@ -668,11 +641,11 @@ Moo {
 
 		loadType = loadType ? \parseFile;
 
-		"fromJSON % converter % %".format(loadType, converter, obj).debug(this);
+		//"fromJSON % converter % %".format(loadType, converter, obj).debug(this);
 		//obj.atIgnoreCase("Objects").debug(this);
 
 		obj.isKindOf(String).if({
-			"its' a string".debug(this);
+			//"its' a string".debug(this);
 			decoder = MooCustomDecoder();
 			(loadType != \parseText).if({
 				File.exists(obj).if({
@@ -685,7 +658,7 @@ Moo {
 		});
 
 
-		"fromJSON not recursing".format(obj).debug(this);
+		//"fromJSON not recursing".format(obj).debug(this);
 
 		//semaphore.wait;
 
@@ -722,18 +695,7 @@ Moo {
 
 			// Then get the generics
 			json_generics =  obj.atIgnoreCase("Generics");
-			//ref = generics.atIgnoreCase("Object");
-			//ref.notNil.if({
-			//	genericObject = objects.at(ref.atIgnoreCase("id").asSymbol);
-			//});
-			//ref = generics.atIgnoreCase("Player");
-			//ref.notNil.if({
-			//	genericPlayer = objects.at(ref.atIgnoreCase("id").asSymbol);
-			//});
-			//ref = generics.atIgnoreCase("Room");
-			//ref.notNil.if({
-			//	genericRoom = objects.at(ref.atIgnoreCase("id").asSymbol);
-			//});
+
 			json_generics.do({|item|
 				key = item.atIgnoreCase("key");
 				value = item.atIgnoreCase("object");
