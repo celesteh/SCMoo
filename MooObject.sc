@@ -2,8 +2,10 @@ MooObject : NetworkGui  {
 
 	//classvar >generic;
 
-	var <moo,  owner, <id, <aliases, verbs, location,  <properties, <>immobel,
+	var <moo,  owner, <id, <aliases, <verbs, location,  <properties, <>immobel,
 	superObj;
+
+	// NOTE: there's a reason there's no getter for location. There's a method below!
 
 	*generic {|moo|
 		var ret, moo_generics;
@@ -176,7 +178,7 @@ MooObject : NetworkGui  {
 
 			location = this.class.refToObject(dict.atIgnoreCase("location"), converter, moo);
 			aliases = aliases ++ dict.atIgnoreCase("aliases").collect({|a| a.asSymbol });
-			immobel = dict.atIgnoreCase("immobel");
+			immobel = dict.atIgnoreCase("immobel").asBoolean;
 
 			//"MooObject.restore done".debug(this);
 
@@ -270,27 +272,6 @@ MooObject : NetworkGui  {
 
 
 
-			//super.make_init(moo.api, nil, {});
-
-			/*
-			parent.notNil.if({
-				parent.isKindOf(MooObject).if({
-					superID = parent.id;
-					superObj = parent;
-				}, {
-					superID = parent;
-					//superID.isKindOf(SimpleNumber).if({
-					(superID.isKindOf(String) || superID.isKindOf(Symbol)).if({
-						superObj = moo.at(superID.asSymbol);
-					});
-				});
-
-				this.property_(\parent, superID, false, maker);
-			});
-			*/
-
-			//playableEnv = NetworkGui.make(moo.api);
-			//playableEnv.know = true;
 
 			//"about to do some parent stuff %".format(parent).debug(this);
 			//{ "%".format(parent.name).debug(this); }.try;
@@ -309,60 +290,13 @@ MooObject : NetworkGui  {
 				this.property_(\description, "You see nothing special.", true, maker);
 			});
 
-			this.verb(\look).isNil.if({
-				this.verb_(\look, \this, \none,
 
-					{|dobj, iobj, caller, object|
-						object.description.postln;
-						caller.postUser(object.description.value);
-					}.asCompileString;
-
-				);
-			});
-
-			this.verb(\describe).isNil.if({
-				this.verb_(\describe, \this, \any,
-
-					{|dobj, iobj, caller, object|
-
-						(caller == object.owner).if({
-							//object.description.value_(iobj.asString);
-							object.property_(\description, iobj.asString.stripEnclosingQuotes, false, caller);
-						});
-					}.asCompileString;
-
-				);
-			});
-
-			this.verb(\drop).isNil.if({
-				this.verb_(\drop, \this, \none,
-
-					{|dobj, iobj, caller, object|
-						//caller.contents.remove(dobj);
-						caller.remove(dobj);
-						caller.location.announce("% dropped %".format(caller.name, dobj.name), caller);
-						//caller.location.contents = caller.location.contents.add(dobj);
-						caller.location.addObject(dobj);
-					}.asCompileString;
-
-				);
-			});
-		});
+		}); // end test for nil
 	}
 
 
 	pr_superObj_{|parent|
 		var superID;
-
-		//	genericPlayer.isKindOf(MooObject).if({
-		//		superID = genericPlayer.id;
-		//		superObj = genericPlayer;
-		//	}, {
-		//		superID = genericPlayer;
-		//		superObj = moo.at(superID);
-		//	});
-		//	this.property_(\parent, superID, false);
-		//});
 
 
 		parent.notNil.if({
@@ -464,7 +398,8 @@ MooObject : NetworkGui  {
 
 	formatKey{|key|
 
-		^"%/%".format(id, key).asSymbol;
+		//^"%/%".format(id, key).asSymbol;
+		^Moo.formatKey(id, key);
 	}
 
 	pr_copyParentProperties{|parent|
@@ -520,6 +455,7 @@ MooObject : NetworkGui  {
 		} , {
 			// whatever else is happening here is weird and I don't like it
 			valid = false;
+			//"weird".debug(this);
 		});
 
 		^valid;
@@ -667,7 +603,7 @@ MooObject : NetworkGui  {
 	doesNotUnderstand { arg selector ... args;
 		var verb, property, func, ret;
 
-		//"doesNotUnderstand %".format(selector).debug(this.id);
+		"doesNotUnderstand %".format(selector).debug(this.id);
 
 		//this.dumpBackTrace;
 
@@ -721,7 +657,7 @@ MooObject : NetworkGui  {
 
 		property = this.property(selector);//properties[selector];
 		property.notNil.if({
-			//"porperty % %".format(selector, property.value).debug(this.id);
+			"porperty % %".format(selector, property.value).debug(this.id);
 			^property.value;
 		});
 
@@ -1034,53 +970,21 @@ MooContainer : MooObject {
 
 		semaphore = Semaphore(1);
 		contents = [];
-		//immobel = superObj.immobel;
-
-		this.verb(\inventory).isNil.if({
-			this.verb_(\inventory, \this, \none,
-
-				{|dobj, iobj, caller, object|
-					var str, last;
-					//object.description.postln;
-					(object.contents.size == 0).if({
-						str = "% is empty.".format(object.name);
-					}, {
-						(object.contents.size == 1).if({
-							str = "% contains %.".format(object.name, object.contents[0].name);
-						}, {
-							(object.contents.size > 1).if({
-								last = object.contents.last;
-								str =  "% contains % and %.".format(object.name,
-									object.contents.copyRange(0, object.contents.size-2)
-									.collect({|c| c.name }).asList.join(", "),
-									last.name);
-							})
-						})
-					});
-					str.notNil.if({
-						//str.debug(object);
-						caller.postUser(str);
-					} , {
-						"Should not be nil".warn;
-					});
-				}.asCompileString;
-
-			);
-		});
 
 	}
 
-	remove {|item|
+	remove {|item, caller|
 
-		var key;
+		var key, removedItem, found;
 
 		//"remove %".format(item).debug(this.class);
+
 
 		semaphore.wait;
 
 		//"waited".debug(this);
 
-		contents.remove(item);
+		removedItem = contents.remove(item);
 
 		//"removed from contents".debug(this.class);
 
@@ -1088,25 +992,78 @@ MooContainer : MooObject {
 		key = this.findKeyForValue(item);
 		//"key %".format(key).debug(this.class);
 		//super.remove(item);
-		key.notNil.if({
-			this.removeAt(key);
 
+		key.isNil.if({
+			//this.findObj(item).if({
+				key = item.asString.asSymbol;
+			//});
+		});
+
+		key.notNil.if({
+			found = this.removeAt(key);
+			(removedItem.isNil && found.notNil).if({
+				removedItem = contents.remove(found);
+				removedItem = removedItem ? found;
+			});
 			//"removed from environment".debug(this.class);
+		});
+
+		removedItem.notNil.if({
+			(removedItem.location == this).if({
+				removedItem.location = nil;
+			});
 		});
 
 		semaphore.signal;
 
 		//"signaled".debug(this.class);
 
+		// return the item
+		^removedItem;
+
 	}
 
-	addObject {|item|
+	addObject {|item, caller|
 
-		semaphore.wait;
-		contents = contents.add(item);
-		//playableEnv.put(item.name.asSymbol, item);
-		this.put(item.name.asSymbol, item);
-		semaphore.signal
+		var old_location, mobile = item.immobel.not, removed = true;
+
+		// check if the item can move
+
+		item.immobel.if({
+			caller.isKindOf(MooPlayer).if({
+				((caller == item.owner) || caller.wizard).if({
+					mobile = true;
+				});
+			});
+		});
+
+		mobile.if({
+
+			old_location = item.location;
+
+			(old_location != this).if({
+
+				semaphore.wait;
+
+				old_location.notNil.if({
+					removed = old_location.remove(item, caller);
+				});
+
+				removed.notNil.if({
+					contents = contents.add(item);
+					//playableEnv.put(item.name.asSymbol, item);
+					this.put(item.name.asSymbol, item);
+
+					item.location = this;
+				});
+
+				semaphore.signal
+			});
+		});
+
+		// return success or failure
+		^mobile;
+
 
 	}
 
@@ -1308,8 +1265,12 @@ MooRoom : MooContainer {
 	announceExcluding{|excluded, str, caller|
 		var tell;
 
+		excluded.isKindOf(MooObject).if({
+			excluded = [excluded];
+		});
+
 		players.do({|player|
-			(player != excluded).if({
+			(excluded.includes(player)).not.if({ // if the excluded list does NOT container the player
 				player.postUser(str);
 			});
 		});

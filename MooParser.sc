@@ -137,6 +137,10 @@ MooParser {
 							thing = MooObject(actor.moo, obj, actor);
 							{ actor.addObject(thing); }.fork;
 						},
+						\container, {
+							thing = MooContainer(actor.moo, obj, actor);
+							{ actor.addObject(thing); }.fork;
+						},
 						{ matched = false; }
 					);
 
@@ -229,6 +233,7 @@ MooParser {
 					d_obj = this.reservedWord(dobj);
 				});
 			});
+			//"d_obj %".format(d_obj).debug(this);
 		});
 
 		// try to match the iobj to an object
@@ -236,12 +241,13 @@ MooParser {
 			this.isString(iobj).if({
 				i_obj = iobj;
 			} , {
-				i_obj = this.findObj(i_obj);
+				i_obj = this.findObj(iobj);
 
 				i_obj.isNil.if({
 					i_obj = this.reservedWord(iobj);
 				});
 			});
+			//"i_obj %".format(i_obj).debug(this);
 		});
 
 		// now try to find the verb
@@ -300,9 +306,18 @@ MooParser {
 			});
 		});
 
+		// replace nils with the passed in strings/keys
+		d_obj.isNil.if({
+			d_obj = dobj;
+		});
+		i_obj.isNil.if({
+			i_obj = iobj;
+		});
+
 
 		vfunc.notNil.if({ // call it!!!
 
+			//"found vfunc".debug(this);
 			//vfunc.func.value(d_obj, i_obj, actor);
 			vfunc.invoke(d_obj, i_obj, actor, object);
 			^true;
@@ -530,6 +545,7 @@ MooParser {
 		key = key.asSymbol;
 
 		(found.not && (key ==\me)).if({
+			//"me".debug(this);
 			found = true;
 			obj = actor;
 		});
@@ -645,12 +661,16 @@ MooVerb{
 	*pass {|str|
 		var pass, problem_count;
 
+		// this looks for subsctrings, so because "tar" is a naughty command, we can't have a tardis
+		// obviously this needs fixing via a better regex
+
 		problem_count = MooVerb.disallowed.collect({|naughty|
 			str.find(naughty, true).isNil.if({0}, {1}) + // 1 for a match, 0 for no match
 			str.find(naughty.reverse, true).isNil.if({0}, {1});
 		}).sum;
 
 		pass = (problem_count ==0);
+		//pass.debug(this);
 		^pass;
 	}
 

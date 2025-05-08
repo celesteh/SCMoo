@@ -9,14 +9,17 @@ MooGUI : BileChat {
 
 	mooInit {|imoo, callback|
 
+		var key;
+
 		moo = imoo;
 		me = moo.me;
 		moo.me.me = true;
 
+		key = Moo.formatKey(me.id, \post);
 
 		//moo.api.sendMsg("post/%".format(this.id).asSymbol, this.id, str);
 
-		api.add("post/%".format(me.id).asSymbol, { arg id, str;
+		api.add(key, { arg id, str;
 
 			"Posting: %".format(str).debug(this);
 
@@ -31,11 +34,11 @@ MooGUI : BileChat {
 					this.add(str);
 					//[user, blah].postln;
 				}, {
-					api.remove('msg');
+					api.remove(key);
 				});
 				nil;
 			});
-		}, "For moo ouput. Usage: post/%, nick, text".format(me.id).asSymbol);
+		}, "For moo ouput. Usage: %, id, text".format(key).asSymbol);
 
 
 		inputWidget.keyDownAction_({ arg view, char, modifiers, unicode, keycode;

@@ -367,12 +367,12 @@ MooPlayer  : MooContainer {
 		);
 
 
-		moo.api.add("postUser/%".format(this.id).asSymbol, { arg id, str;
+		moo.api.add(Moo.formatKey(id, \post), { arg id, str;
 
 			(id == this.id).if({
 				this.postUser(str)
 			});
-		}, "For chatting. Usage: post/id, id, text");
+		}, "For chatting. Usage:%, id, text".format(Moo.formatKey(id, \post)));
 
 
 
@@ -386,6 +386,8 @@ MooPlayer  : MooContainer {
 
 	postUser {|str, caller|
 
+		var key = Moo.formatKey(id, \post);
+
 		"postUsr: %".format(str).debug(this.id);
 
 		//"in post".postln;
@@ -395,7 +397,7 @@ MooPlayer  : MooContainer {
 		//}, {
 			// do the api call? - only if we've originated the need for it
 		((caller == this)||me).if({
-				moo.api.sendMsg("post/%".format(this.id).asSymbol, this.id, str);
+				moo.api.sendMsg(key, this.id, str);
 		},{
 			"dont's post".debug(this);
 		});

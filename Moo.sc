@@ -2,6 +2,11 @@ Moo {
 	classvar <>default;
 	var index, objects, users, <api, <semaphore, <pronouns, <host, <>lobby, <me, <generics;
 
+
+	*formatKey{|id, key|
+		^"%/%".format(id, key).asSymbol;
+	}
+
 	*new{|netAPI, json, loadType, isHost=true|
 		^super.new.load(netAPI, json, loadType, isHost)
 	}
@@ -144,6 +149,7 @@ Moo {
 
 			//"json is nil".debug(this);
 
+			/*
 			//ok, the roo ID is always \0
 
 			//"make root".debug(this);
@@ -166,6 +172,23 @@ Moo {
 					} , {
 						caller.postUser("You cannot pick up %".format(object.name), caller);
 					});
+				}
+			);
+			generics[\object].verb_(\verbs, \this, \none,
+				{|dobj, iobj, caller, object|
+
+					var keys = object.verbs.keys.asList;
+
+					(keys.size == 0).if({
+						caller.postUser("% has no verbs".format(object.name));
+					}, {
+						(keys.size == 1).if({
+							caller.postUser("% has a verb, %".format(object.name, keys.first));
+						}, {
+							// more than 1
+							caller.postUser("% has the verbs %, and %".format(object.name, keys.copyRange(0, keys.size-2), keys.last));
+						})
+					})
 				}
 			);
 
@@ -273,7 +296,7 @@ Moo {
 			//generics[MooRoom] = generics[\room];
 
 			lobby = MooRoom(this, "Lobby", root, generics[\room]);
-			me = root;
+
 
 
 
@@ -283,6 +306,10 @@ Moo {
 			MooParser.reserveWord(\l, \look);
 			MooParser.reserveWord(\inv, \inventory);
 
+			*/
+
+			MooInit.initAll(this);
+			me = root;
 
 		});
 
@@ -733,6 +760,8 @@ Moo {
 
 
 		//^"{ \"class\": \"Moo\", \n\"Contents\": % }\n".format(converter.prConvertTree(objects));
+
+		MooInit.updateAll(this);
 		api.silence =false;
 
 	}
