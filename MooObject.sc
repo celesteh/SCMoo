@@ -240,6 +240,7 @@ MooObject : NetworkGui  {
 			((maker == \this)).if({
 				owner = this;
 				maker = this;
+				"we made ourselves!".debug(this.name);
 			} , {
 				owner = maker;
 			});
@@ -603,7 +604,7 @@ MooObject : NetworkGui  {
 	doesNotUnderstand { arg selector ... args;
 		var verb, property, func, ret;
 
-		"doesNotUnderstand %".format(selector).debug(this.id);
+		//"doesNotUnderstand %".format(selector).debug(this.id);
 
 		//this.dumpBackTrace;
 
@@ -738,11 +739,18 @@ MooObject : NetworkGui  {
 
 	== {|other|
 
+		//other.debug(this.name);
+		//other = MooObject.mooObject(other, moo);
+		//other.debug(this.name);
 		other.isKindOf(MooObject).if({
 			^(other.id == this.id);
 		});
 
 		^false;
+	}
+
+	!= {|other|
+		^((this == other).not)
 	}
 
 

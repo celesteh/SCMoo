@@ -126,10 +126,16 @@ MooInit {
 
 				{|dobj, iobj, caller, object|
 
-					(caller == object.owner).if({
-						//object.description.value_(iobj.asString);
-						object.property_(\description, iobj.asString.stripEnclosingQuotes, false, caller);
-					});
+				//"describe".debug(object.name);
+
+				((caller == object.owner) || caller.wizard).if({
+					//"can describe".debug(object.name);
+					//object.description.value_(iobj.asString);
+					object.property_(\description, iobj.asString.stripEnclosingQuotes, false, caller);
+					caller.postUser("You describe % as \"%\".".format(object.name, object.description.value), caller);
+				}, {
+					caller.postUser("You are not allowed to describe % because you are not the owner.".format(object.name), caller);
+				});
 				}.asCompileString;
 
 			);

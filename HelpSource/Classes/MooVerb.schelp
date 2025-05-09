@@ -62,6 +62,8 @@ make cat
 describe cat as "A thoroughly fluffy beast. You've never seen so much hair."
 ::
 
+Get a list of all the verbs on cat by typing code::verbs cat::. You'll notice it already has a handful of verbs inherited from the generic object.
+
 Currently, the easiest way to add and modify properties is via a Document window (or tab in the IDE). Your player is an Environment, so we can get access to everything you're holding via that.
 
 code::

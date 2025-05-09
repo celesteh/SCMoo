@@ -1,0 +1,294 @@
+TITLE:: MooObject
+summary:: An object in the Moo
+categories::Libraries/BiLETools/SCMoo
+related::Classes/Moo, Classes/MooVerb, Classes/MooObject, Classes/NetAPI
+
+DESCRIPTION::
+All objects in the Moo are a MooObject or one of it's subclasses.
+
+CLASSMETHODS::
+
+METHOD:: id
+Find the ID of an object
+ARGUMENT:: obj
+Do you have the ID already? Do you have an object? This method gives you the ID.
+
+METHOD:: mooObject
+Find an object for an ID
+
+ARGUMENT:: obj
+Do you have the object already? Is this just the ID? This method gives you the object.
+
+ARGUMENT:: moo
+The instance of Moo that is tracking the object
+
+
+
+
+METHOD:: new
+
+ARGUMENT:: moo
+an instance of Moo
+
+ARGUMENT:: name
+The name of your object. This is what will show up when you take an inventory
+
+ARGUMENT:: maker
+The MooPlayer who is creating the object and is therefore the owner of it
+
+ARGUMENT:: parent
+This is another Moo object (or ID) from which this new object should inherit all it's properties and whose verbs it should be able to call.
+
+
+
+METHOD:: fromJSON
+Load an object from JSON
+
+ARGUMENT:: dict
+A Dictionary object containing JSON key / value pairs
+
+ARGUMENT:: converter
+An instance of MooJSONConverter
+
+ARGUMENT:: moo
+an instance of Moo
+
+
+
+METHOD:: generic
+find the Moo's generic object, the instance of this class which is the parent (or ancestor) of all other MooObjects
+
+ARGUMENT:: moo
+an instance of Moo
+
+
+METHOD:: refToObject
+When restoring the MOO from JSON, find MooObjects lined to from other MooObject
+ARGUMENT:: obj
+An object which might be JSON, an object ID or an actual MooObject
+
+ARGUMENT:: converter
+An instance of MooJSONConverter
+
+ARGUMENT:: moo
+an insteance of Moo
+
+
+
+INSTANCEMETHODS::
+
+METHOD:: getClock
+Not yet implemented, but allos clock syncing between multiple objectd
+
+ARGUMENT:: quant
+(describe argument here)
+
+
+METHOD:: matches
+Determine if a string or symbol refers to this object, either by its name or an alias
+
+ARGUMENT:: key
+The string or symbol to match
+
+returns:: true or false
+
+METHOD:: isPlayer
+is this object an instance of MooPlayer?
+
+returns:: true or false
+
+
+METHOD:: restore
+Restore an object that was saved as JSON
+
+ARGUMENT:: dict
+A Dictionary object containing JSON key / value pairs
+
+ARGUMENT:: converter
+An instance of MooJSONConverter
+
+ARGUMENT:: moo
+an instance of Moo
+
+
+METHOD:: restored
+This method is called when every object from a JSON file or string has been loaded.
+
+
+
+METHOD:: alias
+Add an alias
+
+ARGUMENT:: new_alias
+the new alias
+
+
+
+METHOD:: verbs
+
+returns:: A list of the verbs on the object
+
+
+
+METHOD:: move
+For an object or player to move itself from one MooRoom to another
+
+ARGUMENT:: newLocation
+The new Room
+
+
+
+METHOD:: aliases
+(describe method here)
+
+returns:: (describe returnvalue here)
+
+METHOD:: owner
+(describe method here)
+
+returns:: (describe returnvalue here)
+
+METHOD:: verb
+(describe method here)
+
+ARGUMENT:: key
+(describe argument here)
+
+ARGUMENT:: dobj
+(describe argument here)
+
+ARGUMENT:: iobj
+(describe argument here)
+
+ARGUMENT:: func
+(describe argument here)
+
+ARGUMENT:: publish
+(describe argument here)
+
+returns:: (describe returnvalue here)
+
+METHOD:: property
+(describe method here)
+
+ARGUMENT:: key
+(describe argument here)
+
+ARGUMENT:: ival
+(describe argument here)
+
+ARGUMENT:: publish
+(describe argument here)
+
+ARGUMENT:: changer
+(describe argument here)
+
+returns:: (describe returnvalue here)
+
+METHOD:: immobel
+(describe method here)
+
+returns:: (describe returnvalue here)
+
+METHOD:: isPublic
+(describe method here)
+
+ARGUMENT:: key
+(describe argument here)
+
+returns:: (describe returnvalue here)
+
+METHOD:: localVerb
+(describe method here)
+
+ARGUMENT:: key
+(describe argument here)
+
+returns:: (describe returnvalue here)
+
+METHOD:: properties
+(describe method here)
+
+returns:: (describe returnvalue here)
+
+METHOD:: ==
+(describe method here)
+
+ARGUMENT:: other
+(describe argument here)
+
+returns:: (describe returnvalue here)
+
+METHOD:: pr_JSONContents
+(describe method here)
+
+ARGUMENT:: converter
+(describe argument here)
+
+returns:: (describe returnvalue here)
+
+METHOD:: moo
+(describe method here)
+
+returns:: (describe returnvalue here)
+
+METHOD:: initMooObj
+(describe method here)
+
+ARGUMENT:: imoo
+(describe argument here)
+
+ARGUMENT:: iname
+(describe argument here)
+
+ARGUMENT:: maker
+(describe argument here)
+
+ARGUMENT:: parent
+(describe argument here)
+
+returns:: (describe returnvalue here)
+
+METHOD:: toJSON
+(describe method here)
+
+ARGUMENT:: converter
+(describe argument here)
+
+returns:: (describe returnvalue here)
+
+METHOD:: location
+(describe method here)
+
+ARGUMENT:: loc
+(describe argument here)
+
+returns:: (describe returnvalue here)
+
+METHOD:: formatKey
+(describe method here)
+
+ARGUMENT:: key
+(describe argument here)
+
+returns:: (describe returnvalue here)
+
+METHOD:: getVerb
+(describe method here)
+
+ARGUMENT:: key
+(describe argument here)
+
+returns:: (describe returnvalue here)
+
+METHOD:: id
+(describe method here)
+
+returns:: (describe returnvalue here)
+
+
+EXAMPLES::
+
+code::
+(some example code)
+::
