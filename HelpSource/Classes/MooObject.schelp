@@ -1,6 +1,6 @@
 TITLE:: MooObject
 summary:: An object in the Moo
-categories::Libraries/BiLETools/SCMoo
+categories::Libraries>BiLETools>SCMoo, Games>SCMoo
 related::Classes/Moo, Classes/MooVerb, Classes/MooObject, Classes/NetAPI
 
 DESCRIPTION::
@@ -107,7 +107,7 @@ A Dictionary object containing JSON key / value pairs
 ARGUMENT:: converter
 An instance of MooJSONConverter
 
-ARGUMENT:: moo
+ARGUMENT:: imoo
 an instance of Moo
 
 
@@ -139,56 +139,62 @@ The new Room
 
 
 METHOD:: aliases
-(describe method here)
-
-returns:: (describe returnvalue here)
+get the aliases for this object
+returns:: an Array
 
 METHOD:: owner
-(describe method here)
+get the owner of this object
 
-returns:: (describe returnvalue here)
+returns:: a MooPlayer
 
 METHOD:: verb
-(describe method here)
+Attach a verb to an object. For example, make you have an object called a spear. Perhaps
+you want to be able to throw this at targets such as other players. You might decide
+to invoke your verb with a sentence such as "code:: throw spear at Les ::". In that example, the verb is "throw", the direct object is "spear" and the indirect object is "Les".
 
 ARGUMENT:: key
-(describe argument here)
+A symbol, which is the name of the verb.
 
 ARGUMENT:: dobj
-(describe argument here)
+A symbol: either code:: \this or \any :: If the object is referenced in the direct object, pick code::\this::. If it can be anything else, pick code::\any::.
 
 ARGUMENT:: iobj
-(describe argument here)
+A symbol: either code:: \this or \any, or \none :: If the object is referenced in the indirect object, pick code::\this::. If it can be anything else, pick code::\any::.
 
 ARGUMENT:: func
-(describe argument here)
+A function that takes the arguments code::dobj, iobj, caller, object ::
+
+code::dobj:: is the direct object of the command. If it refers to an MooObject, the function will be passed the object. Otherwise, it will be passed the string.
+
+code::iobj:: is the indirect object of the command. If it refers to an MooObject, the function will be passed the object. Otherwise, it will be passed the string.
+
+code::caller:: is the player who invoked the command
+
+code::object:: is the MooObject to which the verb is attached.
 
 ARGUMENT:: publish
-(describe argument here)
+A boolean. If True, the verb can be invoked via OSC message. This is useful if the verb includes audio.
 
-returns:: (describe returnvalue here)
+
 
 METHOD:: property
-(describe method here)
+Put a property on the object. This is a piece of data that you might use in verbs.
 
 ARGUMENT:: key
-(describe argument here)
+A symbol which is the name of the property. If you use a symbol known to ControlSpec, that spec will be used if you open a GUI for your object.
 
 ARGUMENT:: ival
-(describe argument here)
+The initial value for your new property.
 
 ARGUMENT:: publish
-(describe argument here)
+If true, this property can be accessed via OSC messages
 
 ARGUMENT:: changer
-(describe argument here)
-
-returns:: (describe returnvalue here)
+The entity that has added (or updated) the property. That entity will not be notified of the update.
 
 METHOD:: immobel
-(describe method here)
+If True, users cannot pick up and move the object. If False, they can.
 
-returns:: (describe returnvalue here)
 
 METHOD:: isPublic
 (describe method here)
@@ -212,56 +218,26 @@ METHOD:: properties
 returns:: (describe returnvalue here)
 
 METHOD:: ==
-(describe method here)
+Is this the same as another MooObject?
 
 ARGUMENT:: other
-(describe argument here)
+The Object that might be equal to this one.
 
-returns:: (describe returnvalue here)
-
-METHOD:: pr_JSONContents
-(describe method here)
-
-ARGUMENT:: converter
-(describe argument here)
-
-returns:: (describe returnvalue here)
-
-METHOD:: moo
-(describe method here)
-
-returns:: (describe returnvalue here)
-
-METHOD:: initMooObj
-(describe method here)
-
-ARGUMENT:: imoo
-(describe argument here)
-
-ARGUMENT:: iname
-(describe argument here)
-
-ARGUMENT:: maker
-(describe argument here)
-
-ARGUMENT:: parent
-(describe argument here)
-
-returns:: (describe returnvalue here)
 
 METHOD:: toJSON
-(describe method here)
+Export this object to a JSON string.
 
 ARGUMENT:: converter
-(describe argument here)
+an optional MooJSONConverter
 
-returns:: (describe returnvalue here)
+returns:: a String
 
 METHOD:: location
-(describe method here)
+Get or set the location of a MooObject. This might be a MooRoom, a MooContainer, a MooPlayer holding it, or nil.
+Usually, a MooRoom would not have a location.
 
 ARGUMENT:: loc
-(describe argument here)
+The MooContainer or subclass holding the MooObject
 
 returns:: (describe returnvalue here)
 

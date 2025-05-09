@@ -1,6 +1,6 @@
 TITLE:: MooVerb
 summary:: Functions for MooObjects
-categories:: Libraries/BiLETools/SCMoo
+categories:: Libraries>BiLETools>SCMoo, Games>SCMoo
 related:: Classes/MooObject, Classes/Moo, Classes/SharedResource
 
 DESCRIPTION::
@@ -13,6 +13,7 @@ In the example, "throw spear at Les", the verb is throw, the direct object (dobj
 these refer to and call the verb's function with the arguments: dobj, iobj, caller. The caller is the
 MooPlayer who invoked the function.
 
+Verbs are most often added to objects via the MooObject.verb_ message.
 
 
 CLASSMETHODS::
@@ -30,8 +31,16 @@ ARGUMENT:: iobj
 A symbol, \this if the iobj is the object to which the verb is attached or \any if any object or text may be used or \none if there is no indirect object
 
 ARGUMENT:: func
-A string containing a function, eg
-"{|dobj, iobj, caller| caller.location.announce(iobj + \"was struck by a\" + dobj);}"
+A function that takes the arguments code::dobj, iobj, caller, object ::
+
+dobj is the direct object of the command. If it refers to an MooObject, the function will be passed the object. Otherwise, it will be passed the string.
+
+iobj is the indirect object of the command. If it refers to an MooObject, the function will be passed the object. Otherwise, it will be passed the string.
+
+caller is the player who invoked the command
+
+object is the MooObject to which the verb is attached.
+
 
 ARGUMENT:: obj
 The MooObject to which this verb is attached
