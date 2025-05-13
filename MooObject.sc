@@ -1,3 +1,28 @@
+MooProperty {
+
+	var cv, <>mutable;
+
+	*new {|cv, mutable|
+		^super.newCopyArgs(cv, mutable);
+	}
+
+	value_ {|...args|
+		mutable.if({
+			cv.value_(*args);
+		});
+	}
+
+	value {
+		^cv.value;
+	}
+
+	toJSON{|converter|
+
+		^converter.convertToJSON(cv)
+	}
+
+}
+
 MooObject : NetworkGui  {
 
 	//classvar >generic;
@@ -56,7 +81,7 @@ MooObject : NetworkGui  {
 	restore{|dict, converter, imoo |
 
 		var json_id, parent, json_owner, owner_id, superID, props, public, key, value, jverbs, verb,
-		getObj;
+		getObj, mutable;
 
 		//"restore %".format(dict).debug(this);
 
@@ -136,11 +161,18 @@ MooObject : NetworkGui  {
 				// first find out if it's public
 				public = prop.atIgnoreCase("public");
 				public = public.asBoolean;
+				mutable = prop.atIgnoreCase("mutable");
+				mutable.notNil.if({
+					mutable = mutable.asBoolean;
+				});
 
 				// now go through the keys
 				prop.keys.do({|key|
 					// publish the keys (not counting public)
-					(key.asString.compare("public", true) != 0).if({
+					((key.asString.compare("public", true) != 0) &&
+						(key.asString.compare("mutable", true) != 0))
+					.if({
+
 						value = prop.atIgnoreCase(key);
 
 						//"restore: key % value %".format(key, value).debug(this.id);
@@ -152,7 +184,7 @@ MooObject : NetworkGui  {
 						});
 
 						// the changer is the JSON thingee
-						this.property_(key.asSymbol, value, public, converter);
+						this.property_(key.asSymbol, value, public, converter, mutable);
 
 						//"key % value % public % (is a %)".format(key, value, public, public.class).debug(this.class);
 					});
@@ -160,8 +192,10 @@ MooObject : NetworkGui  {
 			});
 
 			name = this.property(\name).value;
+
+			this.property(\parent).mutable = false;
 			parent = this.class.refToObject(this.property(\parent).value, converter, moo);
-			parent = parent ? moo.genericObject;
+			parent = parent ? this.class.generic(moo) ? moo.genericObject;
 			this.pr_superObj_(parent);
 
 
@@ -240,7 +274,7 @@ MooObject : NetworkGui  {
 			((maker == \this)).if({
 				owner = this;
 				maker = this;
-				"we made ourselves!".debug(this.name);
+				//"we made ourselves!".debug(this.name);
 			} , {
 				owner = maker;
 			});
@@ -316,7 +350,7 @@ MooObject : NetworkGui  {
 				superObj.isNil.if({ superObj = superID; });
 			});
 
-			this.property_(\parent, superID, false, owner);
+			this.property_(\parent, superID, false, owner, false, \none);
 		});
 
 		//"parent is %".format(superID).debug(this);
@@ -405,7 +439,7 @@ MooObject : NetworkGui  {
 
 	pr_copyParentProperties{|parent|
 
-		var public, superObject;
+		var public, superObject, mutable;
 
 		superObj.isNil.if({
 			//superObj =
@@ -424,7 +458,8 @@ MooObject : NetworkGui  {
 					this.properties[key].isNil.if({
 						// is it public?
 						public = superObject.isPublic(key);
-						this.property_(key, superObject.property(key).value, public);
+						mutable = superObject.property(key).mutable;
+						this.property_(key, superObject.property(key).value, public, mutable:mutable);
 					});
 				});
 			});
@@ -486,9 +521,9 @@ MooObject : NetworkGui  {
 	}
 
 
-	property_ {|key, ival, publish = true, changer|
+	property_ {|key, ival, publish = true, changer, mutable=true, guitype|
 
-		var shared;
+		var shared, property;
 
 		this.prValidID(key).not.if({
 			MooError("Property must start with a letter and not contain special characters").throw;
@@ -502,6 +537,10 @@ MooObject : NetworkGui  {
 
 		verbs.includesKey(key).if({
 			MooError("% name already in use by %".format(key, this.name)).throw;
+		});
+
+		mutable.not.if({
+			guitype = guitype ? \none
 		});
 
 
@@ -519,7 +558,10 @@ MooObject : NetworkGui  {
 			} , {
 				shared = this.addLocal(this.formatKey(key), ival);
 			});
-			properties.put(key, shared);
+			shared.guitype = guitype ? shared.guitype;
+
+			property = MooProperty(shared, mutable);
+			properties.put(key, property);
 			this.put(key, shared); // make sure it's accessible with out the ID
 		});
 
@@ -658,7 +700,7 @@ MooObject : NetworkGui  {
 
 		property = this.property(selector);//properties[selector];
 		property.notNil.if({
-			"porperty % %".format(selector, property.value).debug(this.id);
+			//"porperty % %".format(selector, property.value).debug(this.id);
 			^property.value;
 		});
 
@@ -774,13 +816,19 @@ MooObject : NetworkGui  {
 
 	pr_JSONContents {|converter|
 
-		var public, str="", synths ="", props, json_verbs; //properties.collect({|p| converter.convertToJSON(p) });
+		var public, str="", synths ="", props, prop, mutable, json_verbs; //properties.collect({|p| converter.convertToJSON(p) });
 
 
 
 		props = properties.keys.collect({|key|
 			public = this.isPublic(key);
-			"{ \"%\" : %, \"public\" : % }".format(key, converter.convertToJSON(properties[key]), public);
+			mutable = "";
+			prop = properties[key];
+			prop.respondsTo(\mutable).if({
+				mutable = ", \"mutable\" : %".format(prop.mutable);
+			});
+
+			"{ \"%\" : %, \"public\" : % % }".format(key, converter.convertToJSON(prop), public, mutable);
 		}).asList;
 
 		//"MooObject.prJSONCONTENTS".debug(this);

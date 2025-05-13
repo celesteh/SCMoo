@@ -215,10 +215,15 @@ The MooPlayer that I'm playing as
 
 EXAMPLES::
 
+We're just running this locally, so we're not going to use a read OSCClient. All of the examples below rely on
+code::
+n = NetAPI.other("foo", "bar", path:\DummyResponder); n.client.echo_(false);
+::
+
 To start a new moo as a Root user:
 
 code::
-{ m = Moo.bootstrap(NetAPI.broadcast("foo", "bar")); }.fork
+{ m = Moo.bootstrap(n); }.fork
 ::
 
 To save your objects to a file:
@@ -232,12 +237,15 @@ f.close;
 
 To load your saved objects
 code::
-(
-{
-	n = NetAPI.broadcast("foo", "bar");
-	5.wait;
-	m = Moo.bootstrap(n, "/tmp/Moo.JSON".standardizePath);
-}.fork;
-)
+{ m = Moo.bootstrap(n, "/tmp/Moo.JSON".standardizePath); }.fork;
 ::
 
+Open a New Document to write SC and MOO Code in
+code::
+MooGUI.asDocument(m)
+::
+
+Use an existing Document
+code::
+MooGUI.setKeys(Document.current, m.me)
+::

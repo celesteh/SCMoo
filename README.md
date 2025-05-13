@@ -6,12 +6,16 @@ Relies on BiLETools and JSONlib
 
 ## Loading and Saving
 
-To start a new moo as a Root user:
+To use the MOO you need to be running NetAPI (all of the code in this section relies on the following line, which will start is local-only)
 
-    { m = Moo.bootstrap(NetAPI.broadcast("foo", "bar")); }.fork
+	n = NetAPI.other("foo", "bar", path:\DummyResponder); n.client.echo_(false);
+
+Then, to start a new moo as a Root user,
+
+    { m = Moo.bootstrap(n); }.fork
 
 
-To save your objects to a file:
+To save the objects of a running Moo (held in m) to a file:
 
     (
     f = File("/tmp/Moo.JSON".standardizePath, "w");
@@ -22,13 +26,24 @@ To save your objects to a file:
 
 To load your saved objects
 
-    (
-    {
-	  n = NetAPI.broadcast("foo", "bar");
-	  5.wait;
-	  m = Moo.bootstrap(n, "/tmp/Moo.JSON".standardizePath);
-    }.fork;
-  )
+
+    {  m = Moo.bootstrap(n, "/tmp/Moo.JSON".standardizePath); }.fork;
+
+
+This will open a GUI with Moo ouput on the left, input on the bottom, and an editing area on the right. Resize the relatve sizes of the output and the editing by dragging the grey line between them.
+
+You can also run the Moo from your current Document by evaluating:
+
+	MooGUI.setKeys(Document.current, m.me)
+
+This will allow you to run Moo commands using the key combination Ctrl >
+
+Or you can open a new Document, with some helpful text at the top:
+
+	m.doc
+
+
+The examples below can be input via the input line on the bottom of the GUI. Or in the larger text area or a Document via Ctrl >
 
 ## Socialising and Role playing
 
@@ -98,15 +113,19 @@ You can use these numbers elsewhere:
 ## The moo in sclang
 
 Every object in the Moo, including your player and your location is a NetworkGui, which is an Environment.
-If we've saved to moo in m (as in the very first example at the top of this file), we can use it in an sc document window.
-In an example above, we made a cat and dropped it, so it's in our room. Let's do some stuff with the cat, in a document. A small window will open with a play button. Boot the server and press play to play it.
+If we've saved to moo in m (as in the very first example at the top of this file), we can use it in an sc document window.  We can use the right hand on the included GUI, or get a new Document via
 
-	m.me.location.push;
+	MooGUI.asDocument(m)
+
+In an example above, we made a cat and dropped it, so it's in our room. Let's do some stuff with the cat, in a document.
+
+	(m.me ++ m.me.location).push;
 	~cat.property_(\freq);
 	~cat.show;
 	~cat.pattern_(Pbind(\freq, ~cat[\freq]));
 
-You'll note that the labels in the window start with a number. That is the object's ID.
+A small window will open with a play button.
+You'll note that the labels in the window include a number. That is the object's ID.
 You can also use sclang to write verbs on your objects:
 
 	~cat.verb_(\pet, \this, \none,
@@ -126,7 +145,13 @@ This verb is called pet, it acts on the direct object and does not take an indir
 the function is called with the direct object, the indirect object (nil in this case), the caller - the player
 who is doing the invoking, and the cat.
 
+We can run moo commands in the Document.
+
 	pet cat
+
+Evaluate that loine with Ctrl >, Using the > as you would the enter key.
+
+You'll see your verb execute.
 
 In the above example, ```caller.location.announceExcluding(excluded, string, caller)``` sends a text output
 message to everyone but the player listed as excluded. The message is string. And caller is the person
@@ -171,5 +196,8 @@ Then drop the cat where Bob can pick it up.
 ## To do
 
 * Logins
-* No give verb yet
 * Pdefs, patterns and synths are not yet shared, nor saved to JSON
+
+
+## Done
+* No give verb yet

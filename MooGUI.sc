@@ -2,10 +2,63 @@ MooGUI {
 
 	var moo, me, <view, <string, disp, >notify, <exists, <color, inputWidget, codeText, openSpace;
 
+	*asDoc {|moo, callback|
+		^this.asDocument(moo, callback);
+	}
+
+	*asDocument{|moo, callback|
+		var doc;
+		doc = Document("Moo", "// Code Space\n\n// Put moo objects in the environment with the following:\n\n(Moo.default.me ++ Moo.default.me.location).push;\n\n// You will need to re-evaluate on creating any new object.\n\n// To evaluate Moo code, use Ctrl >\n\n", (moo.me ++ moo.me.location));
+		this.setKeys(doc, moo.me);
+		callback.notNil.if({ { callback.value(doc) }.defer; });
+		^doc;
+	}
 
 	*new{|moo, callback, view, show=true|
 
 		^super.newCopyArgs(moo, moo.me, view).init(show, callback);
+	}
+
+	*setKeys{|widget, me|
+
+		widget.keyDownAction_({|doc, char, mod, unicode, keycode |
+			var string;
+			var returnVal = nil;
+			var altArrow, altLeft, altPlus, altMinus;
+			//[mod, keycode, unicode].postln;
+
+			altArrow = Platform.case(
+				\osx, { ((keycode==124)||(keycode==123)||(keycode==125)
+					||(keycode==126)||(keycode==111)||(keycode==113)||
+					(keycode==114)||(keycode==116)||(keycode==37)||
+					(keycode==38)||(keycode==39)||(keycode==40))
+				},
+				\linux, {((keycode>=65361) && (keycode <=65364))},
+				\windows, // I don't know, so this is a copy of the mac:
+				{ ((keycode==124)||(keycode==123)||(keycode==125)
+					||(keycode==126)||(keycode==111)||(keycode==113)||
+					(keycode==114)||(keycode==116)||(keycode==37)||
+					(keycode==38)||(keycode==39)||(keycode==40))
+				}
+			);
+
+			altLeft = Platform.case(
+				\osx, {((keycode==123) || (keycode==37))},
+				\linux,{(keycode==65361)},
+				\windows, // I don't know, so here's a copy of osx
+				{((keycode==123) || (keycode==37))}
+			);
+
+			((mod.isAlt && altArrow.value) || (mod.isCtrl && (char == $\>))).if({
+				 // alt + left or up or right or down arrow keys
+					//"eval".debug(this);
+					string = doc.selectedString;
+					MooParser(me, string);
+
+			});
+		});
+
+		^widget
 	}
 
 
@@ -40,7 +93,7 @@ MooGUI {
 		codeText.hasVerticalScroller = true;
 		codeText.autohidesScrollers_(true);
 		codeText.enterInterpretsSelection = true;
-		codeText.string_("//Code Space\n\n(Moo.default.me ++ Moo.default.me.location).push;");
+		codeText.string_("// Code Space\n\n(Moo.default.me ++ Moo.default.me.location).push;\n\n");
 		codeText.syntaxColorize;  // it would be nice if this worked
 		codeText.tabWidth_(15);
 
@@ -65,43 +118,7 @@ MooGUI {
 
 		// add functionality
 
-		codeText.keyDownAction_({|doc, char, mod, unicode, keycode |
-			var string;
-			var returnVal = nil;
-			var altArrow, altLeft, altPlus, altMinus;
-			//[mod, keycode, unicode].postln;
-
-			altArrow = Platform.case(
-				\osx, { ((keycode==124)||(keycode==123)||(keycode==125)
-					||(keycode==126)||(keycode==111)||(keycode==113)||
-					(keycode==114)||(keycode==116)||(keycode==37)||
-					(keycode==38)||(keycode==39)||(keycode==40))
-				},
-				\linux, {((keycode>=65361) && (keycode <=65364))},
-				\windows, // I don't know, so this is a copy of the mac:
-				{ ((keycode==124)||(keycode==123)||(keycode==125)
-					||(keycode==126)||(keycode==111)||(keycode==113)||
-					(keycode==114)||(keycode==116)||(keycode==37)||
-					(keycode==38)||(keycode==39)||(keycode==40))
-				}
-			);
-
-			altLeft = Platform.case(
-				\osx, {((keycode==123) || (keycode==37))},
-				\linux,{(keycode==65361)},
-				\windows, // I don't know, so here's a copy of osx
-				{((keycode==123) || (keycode==37))}
-			);
-
-			if( mod.isAlt && altArrow.value,
-				{ // alt + left or up or right or down arrow keys
-					"eval".debug(this);
-					string = doc.selectedString;
-					MooParser(me, string);
-
-				}
-			);
-		});
+		this.class.setKeys(codeText, me);
 
 
 		moo.api.add(key, { arg id, str;
@@ -159,18 +176,22 @@ MooGUI {
 		});
 
 
-		AppClock.sched(0.1, {
-			//"ready for callback".debug(this);
-			callback.notNil.if({
-				//"callback".debug(this);
-				callback.value(this);
-			});
-			nil;
-		});
+		this.callback(callback);
+
 
 	}
 
+	callback {|func|
 
+		AppClock.sched(0.1, {
+			//"ready for callback".debug(this);
+			func.notNil.if({
+				//"callback".debug(this);
+				func.value(this);
+			});
+			nil;
+		});
+	}
 
 	color_ {|c|
 		color = c;

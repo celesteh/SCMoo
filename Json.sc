@@ -51,7 +51,7 @@ MooCustomDecoder {
 		*/
 
 		input.isKindOf(Dictionary).if({
-			input.atIgnoreCase("class").debug(this);
+			//input.atIgnoreCase("class").debug(this);
 			class = class ? input.atIgnoreCase("class");
 			//"class is %, a kind of %".format(class, class.class).debug(this);
 
@@ -62,7 +62,7 @@ MooCustomDecoder {
 			jsonClass = class.asSymbol.asClass;
 
 			jsonClass.respondsTo(\fromJSON).if({
-				"Send it to the class % with converter %".format(class, converter).debug(this);
+				//"Send it to the class % with converter %".format(class, converter).debug(this);
 				^jsonClass.fromJSON(input, converter, moo);
 			});
 
@@ -122,7 +122,7 @@ MooJSONConverter : JSONlib {
 	*parseFile {|filePath, customDecoder=nil, useEvent=true, postWarnings=true, moo|
 		var converter, pre_raw, raw;
 
-		"parseFile".debug(this);
+		//"parseFile".debug(this);
 
 		customDecoder = customDecoder ? MooCustomDecoder();
 		converter = this.new(
@@ -255,7 +255,7 @@ MooJSONConverter : JSONlib {
 			str = "[" + object.toJSON(this) ;
 
 			//"queue".debug(this);
-			queue.do({|item| item.postln });
+			//queue.do({|item| item.postln });
 			//str.debug(this);
 
 			obj = queue.pop;//queue.removeAt(0);
@@ -408,7 +408,7 @@ MooJSONConverter : JSONlib {
 
 		var class, type, id, object;
 
-		"restoreMoo %".format(obj).debug(this);
+		//"restoreMoo %".format(obj).debug(this);
 
 		obj.isKindOf(Dictionary).if({
 
@@ -448,7 +448,7 @@ MooJSONConverter : JSONlib {
 	prConvertToMoo { |obj, class, moo|
 		var res, val;
 
-		"prConvertToMoo %".format(obj).debug(this);
+		//"prConvertToMoo %".format(obj).debug(this);
 
 		if(customDecoder.notNil) {
 

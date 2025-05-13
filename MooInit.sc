@@ -93,7 +93,7 @@ MooInit {
 					ancestry = MooObject.mooObject(object.property(\parent).value, object.moo);
 					{ ancestry.isKindOf(MooObject) }.while ({
 						keys = keys.union(ancestry.verbs.keys.asList);
-						keys.debug(object.id);
+						//keys.debug(object.id);
 						ancestry = MooObject.mooObject(ancestry.property(\parent).value, object.moo);
 					});
 
@@ -115,7 +115,7 @@ MooInit {
 			moo.generics[\object].verb_(\look, \this, \none,
 
 				{|dobj, iobj, caller, object|
-					object.description.postln;
+					//object.description.postln;
 					caller.postUser(object.description.value);
 				}.asCompileString;
 
@@ -139,6 +139,8 @@ MooInit {
 				}.asCompileString;
 
 			);
+
+
 			moo.generics[\object].verb_(\drop, \this, \none,
 
 				{|dobj, iobj, caller, object|
@@ -361,7 +363,7 @@ MooInit {
 
 
 
-		//no testing. These methods shouldn't be changed except by an end user
+		//no testing if they're already set. These methods shouldn't be changed except by an end user
 		moo.generics[\player].verb_(\tell, \this, \any,
 			{|dobj, iobj, caller, object|
 				dobj.postUser(iobj.asString, caller);
@@ -404,7 +406,7 @@ MooInit {
 					})
 				});
 				str.notNil.if({
-					str.debug(object);
+					//str.debug(object);
 					caller.postUser(str);
 				} , {
 					"Should not be nil".warn;

@@ -46,7 +46,7 @@ MooPermission {
 
 		input = input ? level;
 
-		"simple number? %".format(input.isKindOf(SimpleNumber)).debug(this);
+		//"simple number? %".format(input.isKindOf(SimpleNumber)).debug(this);
 
 		input.isKindOf(SimpleNumber).if({
 			output =  MooPermission.at(input.asInteger);
@@ -155,7 +155,7 @@ MooPermission {
 		var sym;
 
 		sym = this.asSymbol;
-		sym.asString.debug(this);
+		//sym.asString.debug(this);
 
 		^"\"%\"".format(sym.asString);
 	}
@@ -184,7 +184,7 @@ MooRoot : MooPlayer {
 
 	*new { |moo, name|
 		//"MooRoot.new".postln;
-		name.postln;
+		//name.postln;
 		^super.new(moo, name, nil, false).initRoot(moo, name);
 	}
 
@@ -192,7 +192,7 @@ MooRoot : MooPlayer {
 
 		//"MooRoot init".postln;
 		//name.postln;
-		moo.dump;
+		//moo.dump;
 
 		//moo = moo ? Moo.default;
 
@@ -220,7 +220,7 @@ MooRoot : MooPlayer {
 		moo.notNil.if({
 			genericPlayer = genericPlayer ? moo.genericPlayer;
 
-			"parent_".debug(this);
+			//"parent_".debug(this);
 
 			genericPlayer.notNil.if({
 
@@ -265,7 +265,7 @@ MooPlayer  : MooContainer {
 
 
 	*fromJSON{|dict, converter, moo|
-		"fromJSON MooPlayer".debug(this);
+		//"fromJSON MooPlayer".debug(this);
 		^super.fromJSON(dict, converter, moo).playerRestore(dict, converter, moo);
 	}
 
@@ -357,7 +357,7 @@ MooPlayer  : MooContainer {
 					})
 				});
 				str.notNil.if({
-					str.debug(object);
+					//str.debug(object);
 					caller.postUser(str);
 				} , {
 					"Should not be nil".warn;
@@ -483,7 +483,7 @@ MooPlayer  : MooContainer {
 
 		var json_owned, perms;
 
-		"playerRestore".debug(this);
+		//"playerRestore".debug(this);
 
 
 		semaphore = semaphore ? Semaphore(1);
@@ -498,7 +498,7 @@ MooPlayer  : MooContainer {
 
 		semaphore.signal;
 
-		"owned %".format(ownedObjects).debug(this);
+		//"owned %".format(ownedObjects).debug(this);
 	}
 
 }

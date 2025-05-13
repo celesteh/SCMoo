@@ -1,6 +1,6 @@
 Moo {
 	classvar <>default;
-	var index, objects, users, <api, <semaphore, <pronouns, <host, <>lobby, <me, <generics;
+	var index, objects, users, <api, <semaphore, <pronouns, <host, <>lobby, <me, <generics, gui;
 
 
 	*formatKey{|id, key|
@@ -126,7 +126,7 @@ Moo {
 
 		this.init(net);
 
-		api.dump;
+		//api.dump;
 
 		objects = Dictionary();//IdentityDictionary();//[];
 		index = 0;
@@ -407,62 +407,22 @@ Moo {
 
 	gui {|callback|
 
-		/*
-
-		var string;
-
-		doc.isNil.if({
-			//doc = TextView.new(Window.new("", Rect(100, 100, 600, 700)).front, Rect(0, 0, 600, 700)).resize_(5);
-			Error("nil").throw;
+		gui.notNil.if({
+			gui.exists.if({
+				//"we have a gui".debug(this);
+				^gui.callback(callback);
+			})
 		});
 
-		doc.keyDownAction_({|doc, char, mod, unicode, keycode |
-			var string;
-			var returnVal = nil;
-			var altArrow, altLeft, altPlus, altMinus;
-			//[mod, keycode, unicode].postln;
+		//"no gui".debug(this);
+		gui = MooGUI(this,callback);
+		^gui;
 
-			altArrow = Platform.case(
-				\osx, { ((keycode==124)||(keycode==123)||(keycode==125)
-					||(keycode==126)||(keycode==111)||(keycode==113)||
-					(keycode==114)||(keycode==116)||(keycode==37)||
-					(keycode==38)||(keycode==39)||(keycode==40))
-				},
-				\linux, {((keycode>=65361) && (keycode <=65364))},
-				\windows, // I don't know, so this is a copy of the mac:
-				{ ((keycode==124)||(keycode==123)||(keycode==125)
-					||(keycode==126)||(keycode==111)||(keycode==113)||
-					(keycode==114)||(keycode==116)||(keycode==37)||
-					(keycode==38)||(keycode==39)||(keycode==40))
-				}
-			);
+	}
 
-			altLeft = Platform.case(
-				\osx, {((keycode==123) || (keycode==37))},
-				\linux,{(keycode==65361)},
-				\windows, // I don't know, so here's a copy of osx
-				{((keycode==123) || (keycode==37))}
-			);
+	doc {|callback|
 
-			if( mod.isAlt && altArrow.value,
-				{ // alt + left or up or right or down arrow keys
-					"eval".debug(this);
-					string = doc.selectedString;
-					MooParser(me, string);
-
-				}
-			);
-
-		});
-
-
-		^doc;
-
-		*/
-
-		^MooGUI(this,callback);
-
-
+		^MooGUI.asDoc(this, callback);
 	}
 
 
