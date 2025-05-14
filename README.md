@@ -23,11 +23,27 @@ To save the objects of a running Moo (held in m) to a file:
     f.close;
     )
 
+Here is an example that will keep a backup copy of your previous save (but in /tmp, so change this if you want it to survive a computer reboot)
+
+	(
+	d =  Platform.defaultTempDir; // change this to where you want to save
+
+	p = (d ++ "Moo.JSON").standardizePath;
+	File.exists(p).if({
+    	File.copy(p, (d ++ "Moo." ++ Date.getDate.rawSeconds ++ ".JSON").standardizePath);
+	});
+	f = File(p, "w");
+	f.write(m.toJSON);
+	f.close;
+	)
+
+
 
 To load your saved objects
 
-
-    {  m = Moo.bootstrap(n, "/tmp/Moo.JSON".standardizePath); }.fork;
+	(
+	p = p ? (Platform.defaultTempDir ++ "Moo.JSON").standardizePath; // change this to your save location
+    {  m = Moo.bootstrap(n, p); }.fork;
 
 
 This will open a GUI with Moo ouput on the left, input on the bottom, and an editing area on the right. Resize the relatve sizes of the output and the editing by dragging the grey line between them.

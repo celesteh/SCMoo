@@ -1241,6 +1241,24 @@ MooRoom : MooContainer {
 		});
 	}
 
+	restored {
+		super.restored;
+
+		semaphore.wait;
+		exits = exits.collect({|item|
+
+			// in case we just have an ID
+			item = this.class.mooObject(item, moo);
+			//"taking names %".format(item.name).debug(this);
+
+			//this.put(item.name.asSymbol, item);
+			item;
+		});
+		semaphore.signal
+
+	}
+
+
 
 	initRoom {
 
@@ -1364,6 +1382,11 @@ MooRoom : MooContainer {
 	}
 
 	addExit{|key, room|
+
+		room = MooObject.mooObject(room);
+		room.isKindOf(MooRoom).not.if({
+			MooTypeError("% is not a MooRoom".format(room)).throw;
+		});
 
 		exits.put(key, room);
 	}

@@ -229,15 +229,35 @@ code::
 To save your objects to a file:
 code::
 (
-f = File("/tmp/Moo.JSON".standardizePath, "w");
+f = File(Platform.defaultTempDir ++ "Moo.JSON".standardizePath, "w");
+f.write(m.toJSON);
+f.close;
+)
+::
+(To prevent clobbering your old save, type this but note that on many platforms, the tmp directory gets deleted on reboot.)
+
+code::
+(
+d =  Platform.defaultTempDir; // change this to where you want to save
+
+p = (d ++ "Moo.JSON").standardizePath;
+File.exists(p).if({
+	File.copy(p, (d ++ "Moo." ++ Date.getDate.rawSeconds ++ ".JSON").standardizePath);
+});
+f = File(p, "w");
 f.write(m.toJSON);
 f.close;
 )
 ::
 
+
+
 To load your saved objects
 code::
-{ m = Moo.bootstrap(n, "/tmp/Moo.JSON".standardizePath); }.fork;
+(
+p = p ? (Platform.defaultTempDir ++ "Moo.JSON").standardizePath; // change this to your save location
+{ m = Moo.bootstrap(n, p); }.fork;
+)
 ::
 
 Open a New Document to write SC and MOO Code in

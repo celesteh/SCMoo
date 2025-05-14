@@ -315,6 +315,8 @@ MooPlayer  : MooContainer {
 			}); //uses a property so doesn't need to be published
 			});*/
 
+		/*
+
 		this.verb_(\tell, \this, \any,
 			{|dobj, iobj, caller, object|
 				dobj.postUser(iobj.asString, caller);
@@ -365,6 +367,7 @@ MooPlayer  : MooContainer {
 			}.asCompileString;
 
 		);
+		*/
 
 
 		moo.api.add(Moo.formatKey(id, \post), { arg id, str;

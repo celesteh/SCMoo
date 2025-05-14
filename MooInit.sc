@@ -153,6 +153,14 @@ MooInit {
 
 			);
 
+		moo.generics[\object].verb_(\examine, \this, \none,
+			{|dobj, iobj, caller, object|
+
+				caller.postUser("% ID %\nAliases %\nProperties %".format(object.name, object.id,
+					object.aliases, object.properties.keys.asArray));
+
+			}.asCompileString;
+		);
 
 	}
 
