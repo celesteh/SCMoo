@@ -1458,7 +1458,8 @@ MooRoom : MooContainer {
 		//stuff = contents.collect({|c| c !? { c.id } ? "null" });
 		departures = exits.keys.collect({|key|
 			val = exits.at(key);
-			"{ \"key\": \"%\", \"val\": %}".format(key, val !? {val.id} ? "null")
+			// if val is not null, try getting the id, but if that fails, just use val
+			"{ \"key\": \"%\", \"val\": %}".format(key, val !? {val.id}.try(val) ? "null")
 		}).asList.join(", ");
 
 		//"departures %".format(departures).debug(this);
