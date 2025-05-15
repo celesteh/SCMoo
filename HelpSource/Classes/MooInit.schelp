@@ -74,6 +74,8 @@ n = NetAPI.other("foo", "bar", path:\DummyResponder); n.client.echo_(false);
 
 	r = MooInit.createMap(d, m);
 
+	r[\KingsCross].description_("A bustling train station in central London.");
+
 }.fork
 
 ::
