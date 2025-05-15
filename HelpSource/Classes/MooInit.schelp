@@ -1,0 +1,79 @@
+TITLE:: MooInit
+summary:: Initialisations for a new (or expanding) Moo
+categories::  Libraries>BiLETools>SCMoo, Games>SCMoo
+related:: Classes/Moo, Classes/MooRoom
+
+DESCRIPTION::
+The class has only class methods to help get a Moo going. Most of them are not normally called by the user, but
+are used by a new Moo on bootstrapping.
+
+
+CLASSMETHODS::
+
+METHOD:: createMap
+A fast way to get a bunch of rooms, connected by named exits.
+
+ARGUMENT:: dict
+This IdentityDictionary's keys are room names for new rooms. They are associated with arrays of key, value pairs ,
+which are exit names and the names of rooms.  For example
+code::
+d = IdentityDictionary[\lobby -> [\manhole, \KingsCross],
+	\KingsCross -> [\escalator, \train, \hatch, \lobby],
+	\train -> [\north, \Newcastle, \east, \Essex, \west, \Wales, \south, \Surrey, \lift, \KingsCross]
+];
+::
+To refer to the lobby, use the key \lobby.
+
+In the above example, \NewCastle, \Essex, \Wales, and \Surrey will also be made into rooms, but they will not
+have exits.
+
+ARGUMENT:: moo
+A Moo.
+
+returns:: an IdentityDictionary which uses all of the keys supplied in the dict argument, now associated with MooRoom objects
+
+
+
+
+
+METHOD:: updateGenericObject
+Not called directly
+
+
+
+METHOD:: initAll
+Not called directly
+
+METHOD:: updateGenericPlayer
+Not called by the user
+
+METHOD:: updateGenericRoom
+Not called directly
+
+
+METHOD:: updateGenericContainer
+Not called directly
+
+METHOD:: updateAll
+Not called by directly
+
+EXAMPLES::
+
+
+code::
+n = NetAPI.other("foo", "bar", path:\DummyResponder); n.client.echo_(false);
+
+{
+	m = Moo.bootstrap(n);
+
+
+	d = IdentityDictionary[\lobby -> [\manhole, \KingsCross],
+		\KingsCross -> [\escalator, \train, \hatch, \lobby],
+		\train -> [\north, \Newcastle, \east, \Essex, \west, \Wales, \south, \Surrey, \lift, \KingsCross]
+	];
+
+	r = MooInit.createMap(d, m);
+
+}.fork
+
+::

@@ -2,6 +2,52 @@ MooInit {
 
 	// This class is for starting a new moo database from scratch
 
+
+	*createMap {|dict, moo|
+
+		var rooms, place, destination;
+
+		// This dictionary looks like
+		//\london, [\north, \newcastle, \east, \essex, \west, \wales, \south, \surrey]
+
+		rooms = IdentityDictionary();
+
+		// first make all the rooms
+		dict.keys.do({|key|
+
+			key = key.asSymbol;
+			((key != \lobby) && (key != \Lobby)).if({
+				rooms.put(key, MooRoom(moo, key.asString, moo.me, moo.generics[\room]));
+			} , {
+				rooms.put(key, moo.lobby);
+			});
+		});
+
+		// then make all the exits and any leaf nodes not mentioned earlier
+		dict = dict.collect({|item, key|
+			place = rooms.at(key.asSymbol);
+
+			item.pairsDo({|exit, where|
+
+				[exit, where].debug(key);
+
+				exit = exit.asSymbol;
+				where = where.asSymbol;
+
+				//location.addExit(dobj, thing);
+				destination = rooms.at(where);
+				destination.isNil.if({
+					destination = MooRoom(moo, where.asString, moo.me, moo.generics[\room]);
+					rooms.put(where, destination);
+				});
+				place.addExit(exit, destination);
+			});
+		});
+
+		^rooms
+	}
+
+
 	*initAll {|moo|
 
 
