@@ -734,15 +734,15 @@ MooObject : NetworkGui  {
 
 		this.isPlayer.not.if({
 			immobel.not.if({
-				oldLocation.remove(this);
+				oldLocation.notNil.if({ oldLocation.remove(this) });
 				newLocation.addObject(this);
 				moved = true;
 			});
 		} , {
 			//name = this.property(\name);
 			//oldLocation.player.remove(this);
-			oldLocation.depart(this, oldLocation, this);
-			newLocation.arrive(this, newLocation, this);
+			oldLocation.notNil.if({ oldLocation.depart(this, oldLocation, this, oldLocation) });
+			newLocation.arrive(this, newLocation, this, newLocation);
 			moved = true;
 		});
 
@@ -1029,16 +1029,18 @@ MooContainer : MooObject {
 
 	}
 
-	remove {|item, caller|
+	remove {|item, caller, shouldBlock=true|
 
 		var key, removedItem, found;
 
 		//"remove %".format(item).debug(this.class);
+		//"remove sempahore wait".debug(this.name);
 
+		shouldBlock.if({
+			semaphore.wait;
+		});
 
-		semaphore.wait;
-
-		//"waited".debug(this);
+		//"remove waited".debug(this.name);
 
 		removedItem = contents.remove(item);
 
@@ -1070,20 +1072,24 @@ MooContainer : MooObject {
 			});
 		});
 
-		semaphore.signal;
+		shouldBlock.if({
+			semaphore.signal;
+		});
 
-		//"signaled".debug(this.class);
+		//"remove signaled".debug(this.name);
 
 		// return the item
 		^removedItem;
 
 	}
 
-	addObject {|item, caller|
+	addObject {|item, caller, shouldBlock=true|
 
 		var old_location, mobile = item.immobel.not, removed = true;
 
 		// check if the item can move
+
+		//"addObject".debug(this.name);
 
 		item.immobel.if({
 			caller.isKindOf(MooPlayer).if({
@@ -1099,7 +1105,12 @@ MooContainer : MooObject {
 
 			(old_location != this).if({
 
-				semaphore.wait;
+				//"addObject wait".debug(this.name);
+				shouldBlock.if({
+					semaphore.wait;
+				});
+
+				//"addObject waited".debug(this.name);
 
 				old_location.notNil.if({
 					removed = old_location.remove(item, caller);
@@ -1113,7 +1124,10 @@ MooContainer : MooObject {
 					item.location = this;
 				});
 
-				semaphore.signal
+				shouldBlock.if({
+					semaphore.signal;
+				});
+				//"addObject signaled".debug(this.name);
 			});
 		});
 
@@ -1187,7 +1201,9 @@ MooContainer : MooObject {
 	restored {
 		super.restored;
 
+		//"restore wait".debug(this.name);
 		semaphore.wait;
+		//"restore waited".debug(this.name);
 		contents = contents.collect({|item|
 
 			// in case we just have an ID
@@ -1197,7 +1213,8 @@ MooContainer : MooObject {
 			this.put(item.name.asSymbol, item);
 			item;
 		});
-		semaphore.signal
+		semaphore.signal;
+		//"restore signaled".denug(this.name);
 
 	}
 
@@ -1244,7 +1261,9 @@ MooRoom : MooContainer {
 	restored {
 		super.restored;
 
+		//"restored wait".debug(this.name);
 		semaphore.wait;
+		//"restored waited".debug(this.name);
 		exits = exits.collect({|item|
 
 			// in case we just have an ID
@@ -1254,7 +1273,8 @@ MooRoom : MooContainer {
 			//this.put(item.name.asSymbol, item);
 			item;
 		});
-		semaphore.signal
+		semaphore.signal;
+		//"restored signal".debug(this.name);
 
 	}
 
@@ -1268,59 +1288,14 @@ MooRoom : MooContainer {
 		exits = IdentityDictionary();
 		immobel = true;
 
-		this.verb(\announce).isNil.if({
 
-			this.verb_(\announce, \any, \this,
-				// announce "blah" to here
-
-				{|dobj, iobj, caller|
-
-					iobj.announce(dobj, caller);
-				}.asCompileString;
-
-			);
-		});
-
-		this.verb(\arrive).isNil.if({
-			this.verb_(\arrive, \any, \this,
-
-				{|dobj, iobj, caller|
-					//"arrive".postln;
-					caller.isPlayer.if({
-
-						iobj.announce("With a dramatic flourish, % enters".format(caller.name));
-						//players = players.add(caller);
-						//caller.dumpStack;
-						iobj.addPlayer(caller);
-						caller.location = iobj;
-						iobj.getVerb(\look).invoke(iobj, iobj, caller, iobj);
-					});
-
-				}.asCompileString;
-
-			);
-		});
-
-		this.verb(\depart).isNil.if({
-			this.verb_(\depart, \any, \this,
-
-				{|dobj, iobj, caller|
-					caller.isPlayer.if({
-
-						//players.remove(caller);
-						iobj.removePlayer(caller);
-						iobj.announce("With a dramatic flounce, % departs".format(caller.name));
-
-					});
-				}.asCompileString;
-
-			);
-		});
 	}
 
 	announce {|str, caller|
 
 		var tell;
+
+		//"anounce %".format(str).debug(this.name);
 
 		players.do({|player|
 			player.postUser(str, caller);
@@ -1362,19 +1337,29 @@ MooRoom : MooContainer {
 
 
 	removePlayer {|player|
+		//"removePlayer wait".debug(this.name);
 		semaphore.wait;
+		//"removePlayer.waited".debug(this.name);
 		players.remove(player);
 		//playableEnv.remove(player);
-		this.remove(player);
-		semaphore.signal
+		this.remove(player, player, false);
+		semaphore.signal;
+		//"removePlayer.signaled".debug(this.name)
 	}
 
 	addPlayer{|player|
+		//"addPlayer".debug(this.name);
+		semaphore.dump;
+
 		semaphore.wait;
+		//"add Playwe waited".debug(this.name);
 		players = players.add(player);
+		//"players.add(player done".debug(this.name);
 		//playableEnv.put(player.name.asSymbol, player);
 		this.put(player.name.asSymbol, player);
-		semaphore.signal
+		//"this.put(player.name.asSymbol, player); done".debug(this.name);
+		semaphore.signal;
+		//"addPlayer signaled".debug(this.name);
 	}
 
 	exit{|key|

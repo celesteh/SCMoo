@@ -274,6 +274,51 @@ MooInit {
 
 		//this.updateGenericContainer(moo);
 
+			moo.generics[\room].verb_(\announce, \any, \this,
+				// announce "blah" to here
+
+				{|dobj, iobj, caller, object|
+
+					object.announce(dobj, caller);
+				}.asCompileString;
+
+			);
+
+
+			moo.generics[\room].verb_(\arrive, \any, \this,
+
+			{|dobj, iobj, caller, object|
+				//"arrive".debug(object.name);
+				caller.isPlayer.if({
+					//"caller. is a player".debug(object.name);
+						object.announce("With a dramatic flourish, % enters".format(caller.name));
+						//players = players.add(caller);
+						//caller.dumpStack;
+						object.addPlayer(caller);
+						caller.location = iobj;
+						object.getVerb(\look).invoke(object, object, caller, object);
+					});
+
+				}.asCompileString;
+
+			);
+
+
+			moo.generics[\room].verb_(\depart, \any, \this,
+
+				{|dobj, iobj, caller, object|
+					caller.isPlayer.if({
+
+						//players.remove(caller);
+						object.removePlayer(caller);
+						object.announce("With a dramatic flounce, % departs".format(caller.name));
+
+					});
+				}.asCompileString;
+
+			);
+
+
 		moo.generics[\room].verb_(\look, \this, \none,
 
 			{|dobj, iobj, caller, object|
