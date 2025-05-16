@@ -1,0 +1,98 @@
+TITLE:: MooPlayer
+summary:: Player objects for a Moo
+categories:: Libraries>BiLETools>SCMoo, Games>SCMoo
+related:: Classes/Moo, Classes/MooVerb, Classes/MooObject, Classes/NetAPI
+
+
+DESCRIPTION::
+All users have a MooPlayer account associated with them. This is used to track their location,
+their owned objects and their permission level.
+
+CLASSMETHODS::
+
+METHOD:: new
+A constructor
+
+ARGUMENT:: moo
+The moo
+
+ARGUMENT:: name
+The player's name, which should match their user name in NetAPI
+
+ARGUMENT:: user
+an instance of BileUser corresponding to the player
+
+ARGUMENT:: self
+true if this player corresponds to the local user of NetAPI
+
+ARGUMENT:: parent
+this argument is only used by the MooInit class
+
+
+
+
+METHOD:: fromJSON
+Restores a MooPlayer from a Json file
+
+ARGUMENT:: dict
+A Dictionary corresponding to a JSON object
+
+ARGUMENT:: converter
+An instance of MooJSONConverter
+
+ARGUMENT:: moo
+and instance of Moo
+
+
+
+INSTANCEMETHODS::
+
+METHOD:: wizard
+True if the permission level is wazard or greater, false otherwise
+
+
+
+METHOD:: login
+will enable logging in
+
+returns:: (describe returnvalue here)
+
+METHOD:: isPlayer
+
+returns:: True
+
+METHOD:: permissions
+Set or get the permissions level
+
+ARGUMENT:: status
+The new status
+
+ARGUMENT:: caller
+The user setting the new status who must be a wizard
+
+
+METHOD:: me
+
+returns:: True is this corresponds to me, False if not
+
+
+METHOD:: user
+The BileUser associated with this MooPlayer
+
+
+METHOD:: postUser
+Post text to the MooPlayer's GUI or the SC Post window
+
+ARGUMENT:: str
+The string to post
+
+ARGUMENT:: caller
+The user sending that string
+
+
+
+EXAMPLES::
+
+code::
+(some example code)
+::

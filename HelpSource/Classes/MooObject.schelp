@@ -1,7 +1,7 @@
 TITLE:: MooObject
 summary:: An object in the Moo
 categories::Libraries>BiLETools>SCMoo, Games>SCMoo
-related::Classes/Moo, Classes/MooVerb, Classes/MooObject, Classes/NetAPI
+related::Classes/Moo, Classes/MooVerb, Classes/NetAPI
 
 DESCRIPTION::
 All objects in the Moo are a MooObject or one of it's subclasses.
