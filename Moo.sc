@@ -34,7 +34,7 @@ Moo {
 
 				//moo.me.me = true;
 				//moo.me = moo.me ? moo.at(0);
-				moo.login(moo.me ? 0);
+				moo.login(0);
 				//"moo.me %".format(moo.me.class).debug(this);
 				//moo.me.me = true;
 				moo.gui({
