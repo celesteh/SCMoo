@@ -670,6 +670,7 @@ MooObject : NetworkGui  {
 		if (selector.isSetter) {
 			selector = selector.asGetter;
 			if(this.respondsTo(selector), {
+				(selector == \me).if({ Error("me!!").throw });
 				warn(selector.asCompileString
 					+ "exists as a method name, so you can't use it as a pseudo-method.");
 				//this.dumpBackTrace;
@@ -1298,6 +1299,7 @@ MooRoom : MooContainer {
 		//"anounce %".format(str).debug(this.name);
 
 		players.do({|player|
+			"paleyer %".format(player.name).debug(this.name);
 			player.postUser(str, caller);
 		});
 
@@ -1340,7 +1342,9 @@ MooRoom : MooContainer {
 		//"removePlayer wait".debug(this.name);
 		semaphore.wait;
 		//"removePlayer.waited".debug(this.name);
+		//players.size.debug(this.name);
 		players.remove(player);
+		//players.debug(this.name);
 		//playableEnv.remove(player);
 		this.remove(player, player, false);
 		semaphore.signal;
@@ -1349,11 +1353,13 @@ MooRoom : MooContainer {
 
 	addPlayer{|player|
 		//"addPlayer".debug(this.name);
-		semaphore.dump;
+		//semaphore.dump;
 
 		semaphore.wait;
 		//"add Playwe waited".debug(this.name);
-		players = players.add(player);
+		players.includes(player).not.if({
+			players = players.add(player);
+		});
 		//"players.add(player done".debug(this.name);
 		//playableEnv.put(player.name.asSymbol, player);
 		this.put(player.name.asSymbol, player);

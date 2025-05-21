@@ -321,7 +321,7 @@ MooGUI {
 
 		moo = imoo;
 		me = moo.me;
-		moo.me.me = true;
+		//moo.me.me = true;
 
 		key = Moo.formatKey(me.id, \post);
 

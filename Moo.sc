@@ -8,15 +8,19 @@ Moo {
 	}
 
 	*new{|netAPI, json, loadType, isHost=true|
+		"new".debug(this);
 		^super.new.load(netAPI, json, loadType, isHost)
 	}
 
 	*login{|netAPI|
+		"login".debug(this);
 		^super.new.init_remote(netAPI)
 	}
 
 	*bootstrap {|api, json, loadType, isHost=true|
 		var doc, moo, startGui;
+
+		"bootstrap".debug(this);
 
 		//doc = Document();
 
@@ -32,7 +36,7 @@ Moo {
 				//moo.me = moo.me ? moo.at(0);
 				moo.login(moo.me ? 0);
 				//"moo.me %".format(moo.me.class).debug(this);
-				moo.me.me = true;
+				//moo.me.me = true;
 				moo.gui({
 					moo.lobby.arrive(moo.me,moo.lobby, moo.me, moo.lobby);
 
@@ -50,6 +54,9 @@ Moo {
 	*fromJSON{|json, api, loadType, isHost=true|
 		var arg1, arg2;
 		var moo, player;
+
+		"fromJSON".debug(this);
+
 
 		// there's a reason I was worried about passing arguments in the wrong order
 		arg1 = json; arg2 = api;
@@ -69,14 +76,16 @@ Moo {
 			//moo.me.isNil.if({
 			//	moo.me = MooPlayer(moo, api.nick, nil, true);
 			//});
-			moo.login(api.nick);
+			moo.login(api);
 
 		});
 
 		AppClock.sched(0, {
 
+			"in the AppClock in *fromJSON %".format(moo.me).debug(this);
+
 			moo.login(moo.me ? 0);
-			moo.me.me = true;
+			//moo.me.me = true;
 
 			moo.gui({
 				moo.lobby.arrive(moo.me,moo.lobby, moo.me, moo.lobby);
@@ -94,12 +103,15 @@ Moo {
 
 
 	*load{|json, api, loadType = \parseFile, isHost=true|
+		"load".debug(this);
 		^this.fromJSON(json, api, loadType, isHost);
 	}
 
 
 
 	init {|net|
+
+		"init".debug(this);
 
 		api = net ? NetAPI.default;
 
@@ -121,6 +133,8 @@ Moo {
 	load {|net, json, loadType, isHost=true|
 
 		var root, user_update_action;
+
+		"load".debug(this);
 
 		Moo.default = this;
 
@@ -172,6 +186,8 @@ Moo {
 	init_remote{|net|
 		var root;
 
+		"init_remote".debug(this);
+
 		this.init(net);
 
 	}
@@ -180,14 +196,25 @@ Moo {
 
 		var oldme;
 
+		"login".debug(this);
+
 		this.host.if({
+
+			"we're a hosT of % %".format(player, player.class).debug(this);
 
 			oldme = me;
 
 			player.isKindOf(NetAPI).if({
+
 				me = this.user(player.nick);//moo.users.atIgnoreCase(api.nick);
 				me.isNil.if({
-					me = MooPlayer(this, player.nick, nil, true);
+					"new player".debug(this);
+					me = MooPlayer(this, player.nick, player, true);
+
+
+					//Error().throw;
+
+
 				});
 			}, {
 				player.isKindOf(MooPlayer).if({
@@ -198,11 +225,12 @@ Moo {
 				});
 			});
 
-			me.notNil.if({
+			(me.notNil && ( oldme != me)).if({
 				oldme.isKindOf(MooPlayer).if({
-					oldme.me = false;
+					oldme.isSelf = false;
 				});
-				me. me = true;
+				//me. me = true;
+				me.isSelf = true;
 			});
 		}, {
 			// not yet written, but probably an auotmatic effect of NetAPI

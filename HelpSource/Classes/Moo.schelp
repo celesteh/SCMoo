@@ -217,7 +217,7 @@ EXAMPLES::
 
 We're just running this locally, so we're not going to use a read OSCClient. All of the examples below rely on
 code::
-n = NetAPI.other("foo", "bar", path:\DummyResponder); n.client.echo_(false);
+n = NetAPI.other("MyName", "Moo", path:\DummyResponder); n.client.echo_(false);
 ::
 
 To start a new moo as a Root user:
@@ -268,4 +268,32 @@ MooGUI.asDocument(m)
 Use an existing Document
 code::
 MooGUI.setKeys(Document.current, m.me)
+::
+
+
+If you wan to run your Moo on a network, as a client, you can do this on a LAN by using broadcasting, if
+your computers are configured to allow that. Before you start the Moo, start your NetAPI using broadcast. (Note
+	you may need to change your firewall settings. Many or most commercial operating systems try to prevent
+	any networking that does not call home to a remote server.)
+
+
+code::
+n = NetAPI.broadcast("MyName", "Moo");
+::
+
+If you have access to a Osc Group Server, see the NetAPI help file.
+
+For most users, the easiest way to enable networking involves a Node server. If you are connecting as a client, first open the websocket, then attach the NetAPI.
+code::
+w = MooWebSocketResponder("MyName","password","Moo","OptionalGroupPassword", "https://path.to.server").echo_(true);
+n = NetAPI.other("Les", "moo", path:w);
+::
+
+How to host the server and make it available to others will be described in the WebSocketResponder helpfile.
+
+Get the JSON from the server and start the Moo
+code::
+w = MooWebSocketResponder("MyName","foo","Moo","OptionalGroupPassword", "https://moo.blessing.exchange/osc.html").echo_(true);
+w.getJSON({|json| json.debug("command line"); j = json; });
+Moo.load(j,  NetAPI.other("MyName", "Moo", path:w), \parseText)
 ::

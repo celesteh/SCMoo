@@ -273,7 +273,7 @@ MooPlayer  : MooContainer {
 
 		var pronouns;
 
-		//"initPlayer".postln;
+		"initPlayer".debug(this);
 
 		//(imoo.notNil || iname.notNil || iuser.notNil).if({
 
@@ -286,7 +286,6 @@ MooPlayer  : MooContainer {
 			//me.if({
 			//	iname = iname ? imoo.api.nick;
 			//});
-
 
 			permissions = MooPermission();
 
@@ -370,6 +369,7 @@ MooPlayer  : MooContainer {
 		*/
 
 
+
 		moo.api.add(Moo.formatKey(id, \post), { arg id, str;
 
 			(id == this.id).if({
@@ -383,6 +383,22 @@ MooPlayer  : MooContainer {
 
 
 
+	}
+
+	me_ {
+
+		Error().throw;
+	}
+
+	isSelf_ {|bool|
+
+		bool.isKindOf(Boolean).if({
+			me = bool
+		});
+	}
+
+	isSelf {
+		^me
 	}
 
 	isPlayer{ ^true }

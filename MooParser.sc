@@ -75,6 +75,8 @@ MooParser {
 
 		//"location % ".format(speaker.location).debug("MooParser init");
 
+		actor.name.debug(this);
+
 		this.movement().not.if({
 			this.creation().not.if({
 				this.call();
