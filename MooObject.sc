@@ -16,18 +16,26 @@ MooProperty {
 		^cv.value;
 	}
 
+	action_ { |arg1, arg2|
+		arg1 = arg1 ? \local;
+		cv.action_(arg1, arg2);  //this.action_(action_owner, {})
+	}
+
 	toJSON{|converter|
 
 		^converter.convertToJSON(cv)
 	}
 
+	doesNotUnderstand { arg selector ... args;
+		^cv.value.perform(selector, *args);
+	}
 }
 
 MooObject : NetworkGui  {
 
 	//classvar >generic;
 
-	var <moo,  owner, <id, <aliases, <verbs, location,  <properties, <>immobel,
+	var <moo,  owner, <id, <aliases, <verbs, /*location,*/  <properties, <>immobel,
 	superObj;
 
 	// NOTE: there's a reason there's no getter for location. There's a method below!
@@ -69,8 +77,8 @@ MooObject : NetworkGui  {
 		^nil;
 	}
 
-	*new { |moo, name, maker, parent|
-		^super.new.initMooObj(moo, name, maker, parent ? this.generic(moo));
+	*new { |moo, name, maker, parent, local=false|
+		^super.new.initMooObj(moo, name, maker, parent ? this.generic(moo), local);
 	}
 
 	*fromJSON{|dict, converter, moo|
@@ -81,7 +89,7 @@ MooObject : NetworkGui  {
 	restore{|dict, converter, imoo |
 
 		var json_id, parent, json_owner, owner_id, superID, props, public, key, value, jverbs, verb,
-		getObj, mutable;
+		getObj, mutable, location;
 
 		//"restore %".format(dict).debug(this);
 
@@ -127,6 +135,8 @@ MooObject : NetworkGui  {
 		moo.notNil.if({
 
 			super.make_init(moo.api, nil, {});
+			this.sharePlayers = true;
+
 
 			// <moo,  owner, <id, <aliases, verbs, location,  <properties, <>immobel, superObj;
 
@@ -210,7 +220,18 @@ MooObject : NetworkGui  {
 				verbs.put(key, verb);
 			});
 
-			location = this.class.refToObject(dict.atIgnoreCase("location"), converter, moo);
+			dict.atIgnoreCase("location").notNil.if({
+				location = this.class.refToObject(dict.atIgnoreCase("location"), converter, moo);
+				location.isKindOf(MooObject).if({
+					location = location.id;
+				});
+				this.property_(\location, location, changer:moo.api.nick);
+				//this.action_(action_owner, {})
+				this.property(\location).action_(moo.api.nick, {
+					this.location.addObject(this, moo.api.nick);
+				});
+			});
+
 			aliases = aliases ++ dict.atIgnoreCase("aliases").collect({|a| a.asSymbol });
 			immobel = dict.atIgnoreCase("immobel").asBoolean;
 
@@ -221,15 +242,25 @@ MooObject : NetworkGui  {
 
 	restored {
 
+		var superobj, location;
+
 		// call after moo restoration has finished
-		this.pr_superObj_(MooObject.mooObject(superObj, moo));
-		location = MooObject.mooObject(location, moo);
+		superobj = MooObject.mooObject(superObj, moo);
+		this.pr_superObj_(superobj);
+		location =  MooObject.mooObject(this.property(\location).value, moo);
+		this.location = location;
+
+		(location.notNil && (location != -1)).if({
+			this.location.addObject(this, moo.api.nick);
+		});
+
 		owner =  MooObject.mooObject(owner, moo);
+		this.networking();
 
 	}
 
 
-	initMooObj {|imoo, iname, maker, parent|
+	initMooObj {|imoo, iname, maker, parent, local=false|
 
 		var /*name,*/ superID, superKey, public, str, time;
 
@@ -265,6 +296,7 @@ MooObject : NetworkGui  {
 
 			super.make_init(moo.api, nil, {});
 			manyPlayers = false;
+			this.sharePlayers = true;
 
 
 			//moo = imoo;
@@ -326,7 +358,50 @@ MooObject : NetworkGui  {
 			});
 
 
+			local.if({
+				parent = this[\parent].value;
+
+				"parent % % %".format(this, this.name, parent).debug(this);
+
+				parent.isKindOf(MooObject).if({
+					parent = parent.id;
+				});
+				owner = this.owner;
+				owner.isKindOf(MooObject).if({
+					owner = owner.id;
+				});
+
+				api.sendMsg('newObject', this.id, name, this.class, parent, owner, api.nick);
+			});
+
+			this.networking();
+
+
 		}); // end test for nil
+	}
+
+
+	networking {
+
+		//key, ival, publish = true, changer, mutable=true, guitype|
+		api.add("property/%".format(this.id).asSymbol,
+			{arg key, ival, publish = true, changer, mutable=true, guitype, origin;
+				(origin != moo.api.nick).if({
+					this.property_(key, ival, publish = true, changer, mutable=true, guitype);
+				});
+		});
+
+
+	}
+
+	advertise {|property, key, publish, guitype|
+
+		property.notNil.if({
+			api.sendMesg("property/%".format(this.id).asSymbol, key, property.value, publish, api.nick,
+				property.mutable, guitype);
+		});
+
+
 	}
 
 
@@ -362,6 +437,10 @@ MooObject : NetworkGui  {
 
 		obj.isNil.if({
 			^nil
+		});
+
+		obj.isKindOf(MooProperty).if({
+			obj = obj.value;
 		});
 
 		obj.isKindOf(MooObject).if({
@@ -427,7 +506,9 @@ MooObject : NetworkGui  {
 	}
 
 	location{
-		^this.pr_resolve(location)
+		var loc = this.property(\location).value;
+		(loc == -1).if({ ^ nil });
+		^this.pr_resolve(loc);
 	}
 
 
@@ -508,10 +589,21 @@ MooObject : NetworkGui  {
 	}
 
 
-	location_{|loc|
+	location_{|loc, changer|
 
-		location = loc;
-		//"location %".format(location).debug(this.id);
+		changer = changer? moo.api.nick;
+		//location = loc;
+
+		loc.isKindOf(MooObject).if({
+			loc= loc.id;
+		});
+
+		loc.isNil.if({
+			loc = -1;
+		});
+
+		"location %".format(loc).debug(this.id);
+		this.property_(\location, loc, changer:changer);
 	}
 
 	isPublic{|key|
@@ -530,6 +622,8 @@ MooObject : NetworkGui  {
 		});
 
 		key = key.asSymbol;
+
+		"property: %".format(this.formatKey(key)).debug(this.name);
 
 		//"property_ % %".format(key, ival).debug(this.class);
 
@@ -554,16 +648,49 @@ MooObject : NetworkGui  {
 		}, {
 
 			publish.if({
-				shared = this.addShared(this.formatKey(key), ival);
+				shared = this.addShared(this.formatKey(key), ival, owned:false);
+				//shared = this.addRemote(this.formatKey(key));//, ival);
+				//shared.value_(ival, moo);
+				//api.add("property/%".format(this.id).asSymbol,
+				//{arg key, ival, publish = true, changer, mutable=true, guitype, origin;
+				//api.sendMsg("property/%".format(this.id).asSymbol, key, ival,
+				//	publish, changer, mutable, guitype, moo.api.nick);
 			} , {
 				shared = this.addLocal(this.formatKey(key), ival);
 			});
 			shared.guitype = guitype ? shared.guitype;
 
 			property = MooProperty(shared, mutable);
+
 			properties.put(key, property);
 			this.put(key, shared); // make sure it's accessible with out the ID
+
+			//advertise {|property, key, publish, guitype|
+			this.advertise(property, key, publish, shared.guitype);  //advertise {|property, key, publish|
+			//api.remote_query;
+			property.action_({|prop|
+				moo.api.sendMsg(this.formatKey(key), prop.value, moo.api.nick)
+			});
+			moo.api.add(this.formatKey(key), {|val, nick|
+				"OSC input % % %".format(val, nick).debug(property);
+				(nick != moo.api.nick).if({
+					property.value_(val, nick);
+				});
+			});
+
+			moo.api.sendMsg("property/%".format(this.id).asSymbol,
+				key, property.value, publish,  moo.api.nick,  mutable, guitype, moo.api.nick);
+
+
 		});
+		/*
+		api.add("property/%".format(this.id).asSymbol,
+			{arg key, ival, publish = true, changer, mutable=true, guitype, origin;
+				(origin != moo.api.nick).if({
+					this.property_(key, ival, publish = true, changer, mutable=true, guitype);
+				});
+		});
+		*/
 
 		//properties.keys.postln;
 		//"saved as % & % & %".format(properties[key].value, shared, this.perform(key).value).debug(this.id);
@@ -713,15 +840,21 @@ MooObject : NetworkGui  {
 	}
 
 	getClock {|quant|
-		var clock;
-		clock = this.property(\clock);
+		var clock, loc;
+		clock = this.property(\clock).value;
 		clock.isKindOf(MooClock).if({
 			quant = quant ? clock.quant;
 			^[clock.clock, quant];
 		});
 
-		location.notNil.if({
-			^location.getClock(quant);
+		//"we don't have a clock".debug(this.name);
+
+		loc = this.location;
+
+		//"loc %".format(loc).debug(this.name);
+
+		loc.notNil.if({
+			^loc.getClock(quant);
 		});
 
 		^nil
@@ -743,12 +876,14 @@ MooObject : NetworkGui  {
 			//name = this.property(\name);
 			//oldLocation.player.remove(this);
 			oldLocation.notNil.if({ oldLocation.depart(this, oldLocation, this, oldLocation) });
+			// added arrive on Train
 			newLocation.arrive(this, newLocation, this, newLocation);
+
 			moved = true;
 		});
 
 		moved.if({
-			this.location = newLocation;
+			this.location_(newLocation, moo.api.nick);
 		})
 	}
 
@@ -817,7 +952,7 @@ MooObject : NetworkGui  {
 
 	pr_JSONContents {|converter|
 
-		var public, str="", synths ="", props, prop, mutable, json_verbs; //properties.collect({|p| converter.convertToJSON(p) });
+		var public, str="", synths ="", props, prop, mutable, json_verbs, ownerID; //properties.collect({|p| converter.convertToJSON(p) });
 
 
 
@@ -846,6 +981,11 @@ MooObject : NetworkGui  {
 			synths = "";
 		});
 
+		ownerID = owner;
+		ownerID.isKindOf(MooObject).if({
+			ownerID = ownerID.id;
+		});
+
 		//"id %".format(this.id.asString).debug(this);
 
 		str = "\"id\" : \"%\", ".format(this.id.asString);
@@ -854,10 +994,11 @@ MooObject : NetworkGui  {
 		str = str + "\"verbs\" : [ % ],".format(json_verbs.join(", "));
 		str = str + "\"properties\" : [ % ],".format(props.join(", ")); //format(converter.convertToJSON(props)) ;
 		str = str + "\"aliases\" : %,".format(converter.convertToJSON(aliases)) ;
-		str = str + "\"location\" : %,".format(location !? { converter.convertToJSON(location.id) } ? "null") ;
+		//str = str + "\"location\" : %,".format(location !? { converter.convertToJSON(location.id) } ? "null");
+		str = str + "\"location\" : %,".format(this.location !? { converter.convertToJSON(this.location.id) } ? "null");
 		str = str + "\"immobel\" : %,".format(immobel.asCompileString) ;
 		str = str + synths;
-		str = str + "\"owner\": % ".format(owner !? {converter.convertToJSON(owner.id)} ? "null") ;
+		str = str + "\"owner\": % ".format(owner !? {converter.convertToJSON(ownerID)} ? "null") ;
 
 		//str.debug(this);
 
@@ -915,8 +1056,9 @@ MooClock : MooObject {
 
 		istage.notNil.if({
 			stage = istage;
-			location = stage.location;
-			location.add(this);
+			//this.location = (stage.location, maker);
+			this.property_(\location, stage.location, changer: maker);
+			this.location.add(this);
 		});
 
 
@@ -975,7 +1117,7 @@ MooStage : MooObject {
 
 	var players, clock, speakers;
 
-	*new { |moo, name, maker|
+	*new { |moo, name, maker, parent, local|
 		^super.new.initStagre(moo, name, maker);
 	}
 
@@ -984,7 +1126,8 @@ MooStage : MooObject {
 		super.initMooObj(moo, name, maker);
 		players = [];
 		speakers = [];
-		location = maker.location;
+		//location = maker.location;
+		this.location_(maker.location, maker);
 		immobel = true;
 
 		clock = MooClock(moo, "%_clock".format(name), maker);
@@ -1012,9 +1155,9 @@ MooContainer : MooObject {
 
 	var <contents, semaphore;
 
-	*new { |moo, name, maker, parent|
+	*new { |moo, name, maker, parent, local|
 
-		^super.new(moo, name, maker, parent ? this.generic(moo)).initContainer();
+		^super.new(moo, name, maker, parent ? this.generic(moo), local).initContainer();
 	}
 
 	*fromJSON{|dict, converter, moo|
@@ -1069,7 +1212,7 @@ MooContainer : MooObject {
 
 		removedItem.notNil.if({
 			(removedItem.location == this).if({
-				removedItem.location = nil;
+				removedItem.location_(nil, moo.api.nick);
 			});
 		});
 
@@ -1122,7 +1265,7 @@ MooContainer : MooObject {
 					//playableEnv.put(item.name.asSymbol, item);
 					this.put(item.name.asSymbol, item);
 
-					item.location = this;
+					item.location_(this, moo, api.nick);
 				});
 
 				shouldBlock.if({
@@ -1227,9 +1370,9 @@ MooRoom : MooContainer {
 
 	var<players, <exits;
 
-	*new { |moo, name, maker, parent|
+	*new { |moo, name, maker, parent, local|
 
-		^super.new(moo, name, maker, parent ? this.generic(moo)).initRoom();
+		^super.new(moo, name, maker, parent ? this.generic(moo), local).initRoom();
 	}
 
 	*fromJSON{|dict, converter, moo|

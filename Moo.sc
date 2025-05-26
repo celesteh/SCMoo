@@ -12,9 +12,19 @@ Moo {
 		^super.new.load(netAPI, json, loadType, isHost)
 	}
 
-	*login{|netAPI|
+	*login{|netAPI, json, loadType, isHost=true|
+		var moo;
 		"login".debug(this);
-		^super.new.init_remote(netAPI)
+		moo = super.new.load(netAPI, json, loadType, isHost);
+		//^super.new.init_remote(netAPI)
+		moo.toJSON.postln;
+		moo.gui({
+			"arriving".debug(this);
+			//newLocation.arrive(this, newLocation, this, newLocation);
+				//moo.lobby.arrive(moo.me,moo.lobby, moo.me, moo.lobby);
+			moo.lobby.getVerb(\arrive).invoke(moo.me, moo.lobby, moo.me, moo.lobby);
+		});
+		^moo;
 	}
 
 	*bootstrap {|api, json, loadType, isHost=true|
@@ -70,6 +80,7 @@ Moo {
 			moo.fromJSON(json);
 		} , {
 
+			"new moo".debug(this);
 			moo = Moo(api, json, loadType, isHost);
 
 			//moo.me = moo.user(api.nick);//moo.users.atIgnoreCase(api.nick);
@@ -80,20 +91,20 @@ Moo {
 
 		});
 
-		AppClock.sched(0, {
+		//AppClock.sched(0, {
 
-			"in the AppClock in *fromJSON %".format(moo.me).debug(this);
+		//	"in the AppClock in *fromJSON %".format(moo.me).debug(this);
 
-			moo.login(moo.me ? 0);
+		//	moo.login(moo.me ? 0);
 			//moo.me.me = true;
 
-			moo.gui({
-				moo.lobby.arrive(moo.me,moo.lobby, moo.me, moo.lobby);
+		//	moo.gui({
+		//		moo.lobby.arrive(moo.me,moo.lobby, moo.me, moo.lobby);
 
-			});
+		//	});
 
-			nil;
-		});
+		//	nil;
+		//});
 
 		//api.dump;
 
@@ -119,6 +130,10 @@ Moo {
 			Error("You must open a NetAPI first").throw;
 		});
 
+		// For Barcelona
+		api.synthDefs.subscribeRemote = true;
+		//
+
 		semaphore = Semaphore(1);
 		pronouns = IdentityDictionary[ \he -> IdentityDictionary[
 			\sub -> "He", \ob-> "Him", \pa-> "His", \po -> "His", \ref -> "Himself" ];
@@ -126,7 +141,33 @@ Moo {
 			\sub -> "She", \ob-> "Her", \pa-> "Her", \po -> "Her", \ref -> "Herself" ];
 		];
 
-		host = false;
+		//host = false;
+		//api.add('msg', { arg user, blah;
+		//api.add('login', { arg username;
+
+		//	var newuser;
+
+		//	newuser = user(username);
+		//});
+
+		api.add('newObject', {arg id, name, class, parent, owner, sender;
+
+			var obj, user;
+
+			("api.add %, %").format(sender, api.nick).debug(this);
+
+			(sender != api.nick).if({
+
+				user = this.user(owner);
+				user.isNil.if({
+					user = this.at(owner);
+				});
+
+				// moo, name, maker, parent
+				obj = class.asSymbol.asClass.new(this, name, user, this.at(parent));
+				//this.add(obj, name, id, false);
+			});
+		});
 	}
 
 
@@ -149,7 +190,7 @@ Moo {
 
 		host = isHost;
 
-		net.silence = isHost.not; // Don't advertise everything unless we're in charge
+		//net.silence = isHost.not; // Don't advertise everything unless we're in charge
 
 		json.notNil.if({
 			this.fromJSON(json, nil, nil, loadType);
@@ -167,17 +208,21 @@ Moo {
 
 		});
 
+		this.login(api);
+
 		//listen for new users
 		user_update_action = {|buser|
-			var name, muser;
+			var name, muser, idle;
 
 			name = buser.nick.asSymbol;
 			muser = users.at(name);
 			muser.isNil.if({
-				muser = MooPlayer(this, name);
+				muser = MooPlayer(this, name, buser);
 			});
-			lobby.arrive(muser);
 
+			muser.location.isNil.if({
+				lobby.arrive(muser); // this is actually going to be a problem
+			});
 		};
 		api.add_user_update_listener(this, user_update_action );
 
@@ -209,7 +254,7 @@ Moo {
 				me = this.user(player.nick);//moo.users.atIgnoreCase(api.nick);
 				me.isNil.if({
 					"new player".debug(this);
-					me = MooPlayer(this, player.nick, player, true);
+					me = MooPlayer(this, player.nick, player, true, nil, true);
 
 
 					//Error().throw;
@@ -244,7 +289,7 @@ Moo {
 
 	add { |obj, name, id|
 
-		var obj_index, should_add, count;//= true;
+		var obj_index, should_add, count, parent, owner;//= true;
 
 		//"add".debug(this);
 
@@ -312,6 +357,7 @@ Moo {
 		});
 
 		semaphore.signal;
+
 
 		// nothing below should lead to a race condition
 

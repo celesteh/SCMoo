@@ -153,7 +153,7 @@ MooGUI {
 				string = string.stripWhiteSpace;
 				inputWidget.string = "";
 
-				MooParser(me, string);
+				{ MooParser(me, string); }.fork;
 
 			});
 

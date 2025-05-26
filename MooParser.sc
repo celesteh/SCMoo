@@ -11,9 +11,9 @@ MooParser {
 	}
 
 	*reserveWord{|key, object| // optionally tie the word to a thing
-		//"reserveWord".debug(this);
+
 		reservedWords = reservedWords.put(key.asSymbol, object);
-		//reservedWords.debug(this);
+
 	}
 
 	*reservedWord{|key|
@@ -35,8 +35,7 @@ MooParser {
 		var item;
 
 		dict.keys.do({|key|
-			//"key %".format(key).debug(this);
-			//"val %".format(dict.at(key)).debug(this);
+
 			item = converter.restoreMoo(dict.at(key));
 			//"item %".format(item).debug(this);
 
@@ -107,7 +106,7 @@ MooParser {
 
 		var thing, matched = false, index, switch, clone;
 
-		//"creation".postln;
+		"creation".debug(this);
 
 		(verb.asString.toLower.asSymbol == \make).if({
 
@@ -121,26 +120,26 @@ MooParser {
 
 					switch(key,
 						\room, {
-							thing = MooRoom(actor.moo, obj, actor);
+							thing = MooRoom(actor.moo, obj, actor, nil, true);
 							actor.postUser("Here (%) is object number %\nNew room % is object number %".format(actor.location.name, actor.location.id, thing.name, thing.id));
 							//{ actor.move(thing); }.fork;
 						},
 						\stage, {
-							thing = MooStage(actor.moo, obj, actor);
+							thing = MooStage(actor.moo, obj, actor, nil, true);
 							thing.location = actor.location;
 							{ actor.location.addObject(thing); }.fork;
 						},
 						\clock, {
-							thing = MooClock(actor.moo, obj, actor);
+							thing = MooClock(actor.moo, obj, actor, nil, true);
 							//thing.location = actor.location;
 							{ actor.addObject(thing); }.fork;
 						},
 						\object, {
-							thing = MooObject(actor.moo, obj, actor);
+							thing = MooObject(actor.moo, obj, actor, nil, true);
 							{ actor.addObject(thing); }.fork;
 						},
 						\container, {
-							thing = MooContainer(actor.moo, obj, actor);
+							thing = MooContainer(actor.moo, obj, actor, nil, true);
 							{ actor.addObject(thing); }.fork;
 						},
 						{ matched = false; }
@@ -150,7 +149,7 @@ MooParser {
 				};
 
 				matched = switch.(dobj.toLower.asSymbol, iobj);
-				//"matched %".debug(this);
+				"matched %".format(matched).debug(this);
 				matched.not.if({
 					iobj.isNil.if({
 						matched = switch.(\object, dobj.asSymbol);
@@ -209,7 +208,7 @@ MooParser {
 			});
 			clone.notNil.if({
 				matched = true;
-				thing = clone.class.new(actor.moo, iobj.asSymbol, actor, clone);
+				thing = clone.class.new(actor.moo, iobj.asSymbol, actor, clone, true);
 				{ actor.addObject(thing); }.fork;
 			});
 		});
@@ -795,6 +794,8 @@ MooVerb{
 
 		str = func.value;
 
+		"inovke".debug(verb);
+		str.debug(verb);
 
 		this.pass(str).not.if({
 			MooReservedWordError("Verb contains disallowed commands", this.check(str)).throw;
@@ -803,6 +804,8 @@ MooVerb{
 		//"invoke".postln;
 		f = str.compile.value; // "{|a| a.post}".compile.value returns a function
 
+		"compiled".debug(verb);
+
 		object.notNil.if({
 			clock = object.getClock;
 		} , {
@@ -810,6 +813,8 @@ MooVerb{
 				clock = caller.location.getClock;
 			});
 		});
+
+		"got clock".debug(verb);
 
 		{f.value(dobj, iobj, caller, object);}.fork( * clock);
 

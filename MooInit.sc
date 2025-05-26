@@ -334,14 +334,14 @@ MooInit {
 			moo.generics[\room].verb_(\arrive, \any, \this,
 
 			{|dobj, iobj, caller, object|
-				//"arrive".debug(object.name);
+				"arrive".debug(object.name);
 				caller.isPlayer.if({
 					//"caller. is a player".debug(object.name);
 						object.announce("With a dramatic flourish, % enters".format(caller.name));
 						//players = players.add(caller);
 						//caller.dumpStack;
 						object.addPlayer(caller);
-						caller.location = iobj;
+					caller.location_(iobj, caller.name);
 						object.getVerb(\look).invoke(object, object, caller, object);
 					});
 

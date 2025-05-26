@@ -25,7 +25,7 @@ MooWebSocketResponder : WebSocketResponder {
 				webview.runJavaScript("getJSON()", {|res|
 
 
-					res.debug(this);
+					//res.debug(this);
 
 					jsonSemaphore.wait; // one at a time!!
 
@@ -48,9 +48,11 @@ MooWebSocketResponder : WebSocketResponder {
 					});
 
 					jsonSemaphore.signal;
+					//"signaled".debug(this);
 				});
 
 				semaphore.signal;
+				//"bigger signaled".debug(this);
 				nil;
 			});
 		};
