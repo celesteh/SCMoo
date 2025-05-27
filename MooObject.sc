@@ -699,13 +699,15 @@ MooObject : NetworkGui  {
 			//advertise {|property, key, publish, guitype|
 			this.advertise(property, key, publish, shared.guitype);  //advertise {|property, key, publish|
 			//api.remote_query;
-			property.action_({|prop|
+			property.action_(moo.api.nick, {|prop|
 				moo.api.sendMsg(this.formatKey(key), prop.value, moo.api.nick)
 			});
 			moo.api.add(this.formatKey(key), {|val, nick|
 				"OSC input % % %".format(val, nick).debug(property);
 				(nick != moo.api.nick).if({
-					property.value_(val, nick);
+					(property.value != val).if({
+						property.value_(val, nick);
+					})
 				});
 			});
 
