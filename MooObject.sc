@@ -500,6 +500,8 @@ MooObject : NetworkGui  {
 
 	unsilence {
 
+		super.unsilence();
+
 		this.properties.keys.do({|key|
 			properties.at(key).silent = false;
 		});
