@@ -381,7 +381,7 @@ MooInit {
 						stuff = stuff.join(", ");
 						caller.postUser("You see:" + stuff);
 					});
-					others = object.players.select({|player| player != caller });
+					others = object.mooPlayers.select({|player| player != caller });
 					(others.size == 1).if({
 						caller.postUser(Moo.refToObject(others[0]).name.asString + "is here.");
 					}, {

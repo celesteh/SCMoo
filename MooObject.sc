@@ -200,6 +200,17 @@ MooObject : NetworkGui  {
 							value = value.id;
 						});
 
+						// check for numbers hiding in strings
+						value.isKindOf(String).if({
+							value.isDecimal.if({
+								value.contains($.).if({
+									value = value.asFloat;
+								} , {
+									value = value.asInteger;
+								});
+							});
+						});
+
 						// the changer is the JSON thingee
 						this.property_(key.asSymbol, value, public, converter, mutable);
 
@@ -1511,7 +1522,7 @@ MooContainer : MooObject {
 
 MooRoom : MooContainer {
 
-	var <players, <exits;
+	var <mooPlayers, <exits;
 
 	*new { |moo, name, maker, parent, local, id|
 
@@ -1530,7 +1541,7 @@ MooRoom : MooContainer {
 		//"roomRestore".debug(this);
 
 		//semaphore = Semaphore(1);
-		players = [];
+		mooPlayers = [];
 		//contents = [];
 		exits = IdentityDictionary();
 
@@ -1570,7 +1581,7 @@ MooRoom : MooContainer {
 	initRoom {
 
 		//super.initMooObj(true, moo, name, maker);
-		players = [];
+		mooPlayers = [];
 		aliases = ["here"];
 		exits = IdentityDictionary();
 		immobel = true;
@@ -1584,7 +1595,7 @@ MooRoom : MooContainer {
 
 		//"anounce %".format(str).debug(this.name);
 
-		players.do({|player|
+		mooPlayers.do({|player|
 			"paleyer %".format(player.name).debug(this.name);
 			player.postUser(str, caller);
 		});
@@ -1606,7 +1617,7 @@ MooRoom : MooContainer {
 			excluded = [excluded];
 		});
 
-		players.do({|player|
+		mooPlayers.do({|player|
 			(excluded.includes(player)).not.if({ // if the excluded list does NOT container the player
 				player.postUser(str);
 			});
@@ -1629,7 +1640,7 @@ MooRoom : MooContainer {
 		semaphore.wait;
 		//"removePlayer.waited".debug(this.name);
 		//players.size.debug(this.name);
-		players.remove(player);
+		mooPlayers.remove(player);
 		//players.debug(this.name);
 		//playableEnv.remove(player);
 		this.remove(player, player, false);
@@ -1643,13 +1654,13 @@ MooRoom : MooContainer {
 
 		semaphore.wait;
 
-		players.isNil.if({
-			players = [];
+		mooPlayers.isNil.if({
+			mooPlayers = [];
 		});
 
 		//"add Playwe waited".debug(this.name);
-		players.includes(player).not.if({
-			players = players.add(player);
+		mooPlayers.includes(player).not.if({
+			mooPlayers = mooPlayers.add(player);
 		});
 		//"players.add(player done".debug(this.name);
 		//playableEnv.put(player.name.asSymbol, player);
@@ -1702,7 +1713,7 @@ MooRoom : MooContainer {
 
 		found = super.findObj(key);
 		found.isNil.if({
-			found = players.detect({|obj| obj.matches(key) });
+			found = mooPlayers.detect({|obj| obj.matches(key) });
 		});
 		^found;
 
