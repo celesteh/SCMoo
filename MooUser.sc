@@ -253,6 +253,7 @@ MooPlayer  : MooContainer {
 
 		//"MooPlayer.new".postln;
 
+		self = self ? false;
 		uname = name ? user.notNil.if({ user.nick });
 		self.if({
 			uname = uname ? moo.api.nick;

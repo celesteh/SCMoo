@@ -164,27 +164,37 @@ Moo {
 				});
 
 				// moo, name, maker, parent
-				obj = class.asSymbol.asClass.new(this, name, user, this.at(parent), false, id, location);
-				//this.add(obj, name, id, false);
+				(class.atString.compare("MooPlayer") != 1).if({ // we should notmake users this way
+
+					obj = class.asSymbol.asClass.new(this, name, user, this.at(parent), false, id, location);
+					//this.add(obj, name, id, false);
+				});
 			});
 		});
 
 		api.add('User', {arg id, name, nick, location;
-			var player = users.atIgnoreCase(name);
+			var player;
 
 			"api User".debug(this);
 
-			player.isNil.if({
-				player = MooPlayer(this, name, api.getUser(nick), false, nil, false, id, location);
+			(nick.asString.compare(api.nick.asString) != 0).if({
+				player = users.atIgnoreCase(name);
+				player.isNil.if({
+					player = MooPlayer(this, name, api.getUser(nick), false, nil, false, id, location);
+				});
+				player.location_(location, api);
 			});
-			player.location_(location, api.nick);
 		});
 
 		api.add(\reqPlayers, {
 			api.sendMsg(\User, me.id, me.name, api.nick, me.location.id);
 		});
 
-		api.send(\reqPlayers);
+		{
+			api.sendMsg(\reqPlayers);
+			2.wait;
+			api.sendMsg(\reqPlayers);
+		}.fork;
 	}
 
 
@@ -227,21 +237,24 @@ Moo {
 
 		this.login(api);
 
+		// This won't work. We need IDs
+
 		//listen for new users
-		user_update_action = {|buser|
-			var name, muser, idle;
+		//user_update_action = {|buser|
+		//	var name, muser, idle;
 
-			name = buser.nick.asSymbol;
-			muser = users.at(name);
-			muser.isNil.if({
-				muser = MooPlayer(this, name, buser);
-			});
+		//	name = buser.nick.asSymbol;
+		//	muser = users.at(name);
+		//	muser.isNil.if({
+				//muser = MooPlayer(this, name, buser);
+		//		muser = MooPlayer(this, name, buser, self:false, parent, local, id, location|
+		//	});
 
-			muser.location.isNil.if({
-				lobby.arrive(muser); // this is actually going to be a problem
-			});
-		};
-		api.add_user_update_listener(this, user_update_action );
+		//	muser.location.isNil.if({
+		//		lobby.arrive(muser); // this is actually going to be a problem
+		//	});
+		//};
+		//api.add_user_update_listener(this, user_update_action );
 
 	}
 
@@ -294,6 +307,12 @@ Moo {
 				//me. me = true;
 				me.isSelf = true;
 			});
+
+
+			// new user announcement goes here
+			//api.add('User', {arg id, name, nick, location;
+			api.sendMsg('User', me.id, me.name, api.nick, me.location);
+
 		}, {
 			// not yet written, but probably an auotmatic effect of NetAPI
 		});
