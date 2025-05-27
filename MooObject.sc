@@ -953,7 +953,7 @@ MooObject : NetworkGui  {
 		});
 
 		moved.if({
-			this.location_(newLocation, moo.api.nick);
+			this.location_(newLocation, moo.me);
 		})
 	}
 
