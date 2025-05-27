@@ -1035,20 +1035,22 @@ MooObject : NetworkGui  {
 			this.isPlayer.not.if({
 				immobel.not.if({
 					// not a player - need a container
-					oldLocation.isKindOf(MooContainer).if({ oldLocation.remove(this, caller) });
+					oldLocation.isKindOf(MooContainer).if({ oldLocation.remove(this, caller, false) });
 					newLocation.isKindOf(MooContainer).if({ newLocation.addObject(this, caller) });
 					moved = true;
 				});
 			} , {
 				// are a player - need a room
 
-				//name = this.property(\name);
-				//oldLocation.player.remove(this);
-				oldLocation.isKindOf(MooRoom).if({ oldLocation.depart(this, oldLocation, this, oldLocation) });
-				// added arrive on Train
-				newLocation.isKindOf(MooRoom).if({ newLocation.arrive(this, newLocation, this, newLocation) });
+				newLocation.isKindOf(MooRoom).if({
+					//name = this.property(\name);
+					//oldLocation.player.remove(this);
+					oldLocation.isKindOf(MooRoom).if({ oldLocation.depart(this, oldLocation, this, oldLocation) });
+					// added arrive on Train
+					newLocation.if({ newLocation.arrive(this, newLocation, this, newLocation) });
 
-				moved = true;
+					moved = true;
+				});
 			});
 		});
 
@@ -1345,7 +1347,7 @@ MooContainer : MooObject {
 
 	}
 
-	remove {|item, caller, shouldBlock=true|
+	remove {|item, caller, shouldBlock=true, notify=false|
 
 		var key, removedItem, found;
 
@@ -1382,9 +1384,11 @@ MooContainer : MooObject {
 			//"removed from environment".debug(this.class);
 		});
 
-		removedItem.notNil.if({
-			(removedItem.location == this).if({
-				removedItem.location_(nil, moo.api.nick);
+		notify.if({
+			removedItem.notNil.if({
+				(removedItem.location == this).if({
+					removedItem.location_(nil, caller);
+				});
 			});
 		});
 
