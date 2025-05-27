@@ -248,7 +248,7 @@ MooPlayer  : MooContainer {
 	//classvar >generic;
 	var  ownedObjects, <>user, <me, <permissions;
 
-	*new { |moo, name, user, self=false, parent, local, id, location|
+	*new { |moo, name, user, self, parent, local, id, location|
 		var uname;
 
 		//"MooPlayer.new".postln;

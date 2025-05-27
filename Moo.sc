@@ -164,7 +164,7 @@ Moo {
 				});
 
 				// moo, name, maker, parent
-				(class.asString.compare("MooPlayer") != 1).if({ // we should notmake users this way
+				(class.asString.compare("MooPlayer") != 0).if({ // we should notmake users this way
 
 					obj = class.asSymbol.asClass.new(this, name, user, this.at(parent), false, id, location);
 					//this.add(obj, name, id, false);
@@ -180,8 +180,12 @@ Moo {
 			(nick.asString.compare(api.nick.asString) != 0).if({
 				player = users.atIgnoreCase(name);
 				player.isNil.if({
-					player = MooPlayer(this, name, api.getUser(nick), false, nil, false, id, location);
+					//*new { |moo, name, user, self=false, parent, local, id, location|
+					player = MooPlayer(moo:this, name:name, user:api.getUser(nick), self:false,
+						parent:nil, local:false, id:id, location:location);
+
 					loc = MooObject.mooObject(location, this);
+
 					loc.isKindOf(MooRoom).not.if({
 						loc = lobby;
 					});
