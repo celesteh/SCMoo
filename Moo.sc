@@ -164,7 +164,7 @@ Moo {
 				});
 
 				// moo, name, maker, parent
-				(class.atString.compare("MooPlayer") != 1).if({ // we should notmake users this way
+				(class.asString.compare("MooPlayer") != 1).if({ // we should notmake users this way
 
 					obj = class.asSymbol.asClass.new(this, name, user, this.at(parent), false, id, location);
 					//this.add(obj, name, id, false);
@@ -173,21 +173,26 @@ Moo {
 		});
 
 		api.add('User', {arg id, name, nick, location;
-			var player;
+			var player, loc;
 
-			"api User".debug(this);
+			"api User % % % %".format(id, name, nick, location).debug(this);
 
 			(nick.asString.compare(api.nick.asString) != 0).if({
 				player = users.atIgnoreCase(name);
 				player.isNil.if({
 					player = MooPlayer(this, name, api.getUser(nick), false, nil, false, id, location);
+					loc = MooObject.mooObject(location, this);
+					loc.isKindOf(MooRoom).not.if({
+						loc = lobby;
+					});
+					loc.getVerb(\arrive).invoke(player, loc, player, loc); // this will announce arrival n-1 times for N users....., so needs fixing
 				});
 				player.location_(location, api);
 			});
 		});
 
 		api.add(\reqPlayers, {
-			api.sendMsg(\User, me.id, me.name, api.nick, me.location.id);
+			api.sendMsg(\User, me.id, me.name, api.nick, me.property(\location));
 		});
 
 		{
