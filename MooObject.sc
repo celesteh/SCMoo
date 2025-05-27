@@ -702,11 +702,30 @@ MooObject : NetworkGui  {
 			property.action_(moo.api.nick, {|prop|
 				moo.api.sendMsg(this.formatKey(key), prop.value, moo.api.nick)
 			});
+
 			moo.api.add(this.formatKey(key), {|val, nick|
+				var oldSym = false, newSym = false, changed = false, prop = property.value;
+
 				"OSC input % % %".format(val, nick).debug(property);
 				(nick != moo.api.nick).if({
 					(property.value != val).if({
-						property.value_(val, nick);
+						val.isKindOf(Symbol).if({
+							val = val.toString;
+							oldSym = true;
+						});
+						prop.isKindOf(Symbol).if({
+							newSym = true;
+							prop = prop.toString;
+						});
+						((val.isKindOf(String)) && (prop.isKindOf(String))).if({
+							changed = (val.compare(prop) != 0); // if 0, unchanged
+						} , {
+							changed = (prop != val);
+						});
+
+						changed.if({
+							property.value_(val, nick);
+						});
 					})
 				});
 			});
