@@ -150,11 +150,11 @@ Moo {
 		//	newuser = user(username);
 		//});
 
-		api.add('newObject', {arg id, name, class, parent, owner, sender;
+		api.add('newObject', {arg id, name, class, parent, owner, sender, location;
 
 			var obj, user;
 
-			("api.add %, %").format(sender, api.nick).debug(this);
+			("api.add %, % % % % % %").format(sender, api.nick, id, name, class, parent, owner).debug(this);
 
 			(sender != api.nick).if({
 
@@ -164,10 +164,27 @@ Moo {
 				});
 
 				// moo, name, maker, parent
-				obj = class.asSymbol.asClass.new(this, name, user, this.at(parent));
+				obj = class.asSymbol.asClass.new(this, name, user, this.at(parent), false, id, location);
 				//this.add(obj, name, id, false);
 			});
 		});
+
+		api.add('User', {arg id, name, nick, location;
+			var player = users.atIgnoreCase(name);
+
+			"api User".debug(this);
+
+			player.isNil.if({
+				player = MooPlayer(this, name, api.getUser(nick), false, nil, false, id, location);
+			});
+			player.location_(location, api.nick);
+		});
+
+		api.add(\reqPlayers, {
+			api.sendMsg(\User, me.id, me.name, api.nick, me.location.id);
+		});
+
+		api.send(\reqPlayers);
 	}
 
 

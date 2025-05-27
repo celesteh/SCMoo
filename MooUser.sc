@@ -248,7 +248,7 @@ MooPlayer  : MooContainer {
 	//classvar >generic;
 	var  ownedObjects, <>user, <me, <permissions;
 
-	*new { |moo, name, user, self=false, parent, local|
+	*new { |moo, name, user, self=false, parent, local, id, location|
 		var uname;
 
 		//"MooPlayer.new".postln;
@@ -260,7 +260,7 @@ MooPlayer  : MooContainer {
 		//*new { |moo, name, maker, parent|
 		parent = this.generic(moo) ? parent;
 
-		^super.new(moo, uname, \this, parent, local).initPlayer(user, self);
+		^super.new(moo, uname, \this, parent, local, id, location).initPlayer(user, self);
 	}
 
 

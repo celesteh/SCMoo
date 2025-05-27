@@ -77,8 +77,9 @@ MooObject : NetworkGui  {
 		^nil;
 	}
 
-	*new { |moo, name, maker, parent, local=false|
-		^super.new.initMooObj(moo, name, maker, parent ? this.generic(moo), local);
+	*new { |moo, name, maker, parent, local=false, id, location|
+		"new obj id %".format(id).debug(this);
+		^super.new.initMooObj(moo, name, maker, parent ? this.generic(moo), local, id, location);
 	}
 
 	*fromJSON{|dict, converter, moo|
@@ -260,10 +261,11 @@ MooObject : NetworkGui  {
 	}
 
 
-	initMooObj {|imoo, iname, maker, parent, local=false|
+	initMooObj {|imoo, iname, maker, parent, local=false, in_id, location|
 
-		var /*name,*/ superID, superKey, public, str, time;
+		var /*name,*/ superID, superKey, public, str, time, quiet;
 
+		local = local ? false;
 
 		iname.notNil.if({
 
@@ -314,21 +316,23 @@ MooObject : NetworkGui  {
 			//"owner is %".format(owner).debug(this);
 
 			// ok, get the ID very early on
+			"in_id %".format(id).debug(this);
 
+			id = in_id;
+			id.isNil.if({
+				str = superID.asString.copyRange(str.size - 4,str.size-1);
+				time = ((Date.getDate.rawSeconds * 10) + 1000.rand).ceil.asString.copyRange(7,10);
+				//"time %".format(time).debug(this);
+				//id = (str.copyRange(str.size - 2.rrand(8),str.size-1) ++ Date.getDate.rawSeconds.asString)
+				id = (str ++ time).select({|d|
+					d.isDecDigit;
+				}).asString;//.copyRange(0, 17).asInteger;
+				//"id is % ".format(id).debug(this);
+				id = id.copyRange(id.size - 8, id.size);
+				//"id is % ".format(id).debug(this);
+				//(superID.asString ++ this.identityHash.asString).asSymbol;
+			});
 
-
-
-			str = superID.asString.copyRange(str.size - 4,str.size-1);
-			time = ((Date.getDate.rawSeconds * 10) + 1000.rand).ceil.asString.copyRange(7,10);
-			//"time %".format(time).debug(this);
-			//id = (str.copyRange(str.size - 2.rrand(8),str.size-1) ++ Date.getDate.rawSeconds.asString)
-			id = (str ++ time).select({|d|
-				d.isDecDigit;
-			}).asString;//.copyRange(0, 17).asInteger;
-			//"id is % ".format(id).debug(this);
-			id = id.copyRange(id.size - 8, id.size);
-			//"id is % ".format(id).debug(this);
-			//(superID.asString ++ this.identityHash.asString).asSymbol;
 			id = moo.add(this, iname, this.id);
 			name = iname ? id.asString;
 
@@ -357,6 +361,19 @@ MooObject : NetworkGui  {
 				this.property_(\description, "You see nothing special.", true, maker);
 			});
 
+			location = location ? -1;
+
+			this.property(\location).isNil.if({
+				quiet = api.silence;
+				api.silence = local.not;
+				this.property_(\location, location, changer:moo.api.nick); // don't announce a wrong location
+				//this.action_(action_owner, {})
+				api.silence = quiet;
+			});
+			this.property(\location).action_(moo.api.nick, {
+				this.location.addObject(this, moo.api.nick);
+			});
+
 
 			local.if({
 				parent = this[\parent].value;
@@ -371,7 +388,7 @@ MooObject : NetworkGui  {
 					owner = owner.id;
 				});
 
-				api.sendMsg('newObject', this.id, name, this.class, parent, owner, api.nick);
+				api.sendMsg('newObject', this.id, name, this.class, parent, owner, api.nick, location);
 			});
 
 			this.networking();
@@ -383,6 +400,7 @@ MooObject : NetworkGui  {
 
 	networking {
 
+
 		//key, ival, publish = true, changer, mutable=true, guitype|
 		api.add("property/%".format(this.id).asSymbol,
 			{arg key, ival, publish = true, changer, mutable=true, guitype, origin;
@@ -390,6 +408,19 @@ MooObject : NetworkGui  {
 					this.property_(key, ival, publish = true, changer, mutable=true, guitype);
 				});
 		});
+
+
+		//func.value(time, this, input);
+		//key, ival, publish = true, changer, mutable=true, guitype|
+		//api.add("property/%".format(this.id).asSymbol,
+		//	{|time, resp, input|
+		//		input.debug(this.id);
+		//		{arg key, ival, publish = true, changer, mutable=true, guitype, origin;
+		//			(origin != moo.api.nick).if({
+		//				this.property_(key, ival, publish = true, changer, mutable=true, guitype);
+		//			});
+		//		}.value(*input);
+		//});
 
 
 	}
@@ -1042,11 +1073,11 @@ MooClock : MooObject {
 
 	var <stage, <clock;
 
-	*new { |moo, name, maker, stage|
-		^super.new.initClock(moo, name, maker, stage);
+	*new { |moo, name, maker, stage, id, location|
+		^super.new.initClock(moo, name, maker, stage, id, location);
 	}
 
-	initClock {| moo, name, maker, istage|
+	initClock {| moo, name, maker, istage, id, location|
 
 		var sharedTempo;
 
@@ -1117,11 +1148,11 @@ MooStage : MooObject {
 
 	var players, clock, speakers;
 
-	*new { |moo, name, maker, parent, local|
-		^super.new.initStagre(moo, name, maker);
+	*new { |moo, name, maker, parent, local, id, location|
+		^super.new.initStage(moo, name, maker, location);
 	}
 
-	initStage {| moo, name, maker|
+	initStage {| moo, name, maker, location|
 
 		super.initMooObj(moo, name, maker);
 		players = [];
@@ -1155,9 +1186,9 @@ MooContainer : MooObject {
 
 	var <contents, semaphore;
 
-	*new { |moo, name, maker, parent, local|
+	*new { |moo, name, maker, parent, local, id, location|
 
-		^super.new(moo, name, maker, parent ? this.generic(moo), local).initContainer();
+		^super.new(moo, name, maker, parent ? this.generic(moo), local, id, location).initContainer();
 	}
 
 	*fromJSON{|dict, converter, moo|
@@ -1370,9 +1401,9 @@ MooRoom : MooContainer {
 
 	var<players, <exits;
 
-	*new { |moo, name, maker, parent, local|
+	*new { |moo, name, maker, parent, local, id|
 
-		^super.new(moo, name, maker, parent ? this.generic(moo), local).initRoom();
+		^super.new(moo, name, maker, parent ? this.generic(moo), local, id).initRoom();
 	}
 
 	*fromJSON{|dict, converter, moo|
