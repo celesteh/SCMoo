@@ -269,7 +269,7 @@ MooObject : NetworkGui  {
 
 	initMooObj {|imoo, iname, maker, parent, local=false, in_id, location|
 
-		var /*name,*/ superID, superKey, public, str, time, quiet;
+		var /*name,*/ superID, superKey, public, str, time, quiet, changer;
 
 		local = local ? false;
 
@@ -368,16 +368,21 @@ MooObject : NetworkGui  {
 			});
 
 			location = location ? -1;
+			local.if({ changer = maker}, {changer = moo.api});
 
 			this.property(\location).isNil.if({
 				quiet = api.silence;
 				api.silence = local.not;
-				this.property_(\location, location, changer:moo.api.nick); // don't announce a wrong location
+				this.property_(\location, location, changer:changer); // don't announce a wrong location
 				//this.action_(action_owner, {})
 				api.silence = quiet;
 			});
-			this.property(\location).action_(moo.api.nick, {
-				this.location.addObject(this, moo.api.nick);
+			this.property(\location).action_(moo.api, {
+				this.location.notNil.if({
+					(this.location != -1).if({
+						this.location.addObject(this, moo.api);
+					});
+				});
 			});
 
 
