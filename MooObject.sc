@@ -16,6 +16,12 @@ MooProperty {
 		^cv.value;
 	}
 
+	silentValue_{|...args|
+		mutable.if({
+			cv.silentValue_(*args);
+		});
+	}
+
 	action_ { |arg1, arg2|
 		arg1 = arg1 ? \local;
 		cv.action_(arg1, arg2);  //this.action_(action_owner, {})
@@ -699,7 +705,7 @@ MooObject : NetworkGui  {
 			//advertise {|property, key, publish, guitype|
 			this.advertise(property, key, publish, shared.guitype);  //advertise {|property, key, publish|
 			//api.remote_query;
-			property.action_(moo.api.nick, {|prop|
+			property.action_(moo.api, {|prop|
 				moo.api.sendMsg(this.formatKey(key), prop.value, moo.api.nick)
 			});
 
@@ -708,6 +714,7 @@ MooObject : NetworkGui  {
 
 				"OSC input % % %".format(val, nick).debug(property);
 				(nick != moo.api.nick).if({
+					"not me".debug(property);
 					(property.value != val).if({
 						val.isKindOf(Symbol).if({
 							val = val.toString;
@@ -724,7 +731,8 @@ MooObject : NetworkGui  {
 						});
 
 						changed.if({
-							property.value_(val, nick);
+							//property.silentValue_(val, moo.api);
+							property.value(moo.api);
 						});
 					})
 				});
