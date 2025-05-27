@@ -232,10 +232,14 @@ MooObject : NetworkGui  {
 				location.isKindOf(MooObject).if({
 					location = location.id;
 				});
-				this.property_(\location, location, changer:moo.api.nick);
+				this.property_(\location, location, changer:moo.api);
 				//this.action_(action_owner, {})
-				this.property(\location).action_(moo.api.nick, {
-					this.location.addObject(this, moo.api.nick);
+				this.property(\location).action_(moo.api, {
+					this.location.notNil.if({
+						this.location.isKindOf(MooObject).if({
+							this.location.addObject(this, moo.api);
+						});
+					});
 				});
 			});
 
@@ -257,7 +261,7 @@ MooObject : NetworkGui  {
 		location =  MooObject.mooObject(this.property(\location).value, moo);
 		this.location = location;
 
-		(location.notNil && (location != -1)).if({
+		(location.notNil && (location.isKindOf(MooObject))).if({
 			this.location.addObject(this, moo.api.nick);
 		});
 
@@ -378,8 +382,9 @@ MooObject : NetworkGui  {
 				api.silence = quiet;
 			});
 			this.property(\location).action_(moo.api, {
+				"put in %".format(this.location).debug(name);
 				this.location.notNil.if({
-					(this.location != -1).if({
+					(this.location.isKindOf(MooObject)).if({
 						this.location.addObject(this, moo.api);
 					});
 				});
@@ -549,7 +554,7 @@ MooObject : NetworkGui  {
 
 	location{
 		var loc = this.property(\location).value;
-		(loc == -1).if({ ^ nil });
+		((loc == -1) || ("-1".compare(loc.asString) == 0)).if({ ^ nil });
 		^this.pr_resolve(loc);
 	}
 

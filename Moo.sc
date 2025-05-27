@@ -34,7 +34,7 @@ Moo {
 
 		//doc = Document();
 
-		startGui = json.isNil;
+		startGui = true;//json.isNil;
 
 		moo = Moo(api, json, loadType, isHost);
 
