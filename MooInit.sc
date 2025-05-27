@@ -383,11 +383,11 @@ MooInit {
 					});
 					others = object.mooPlayers.select({|player| player != caller });
 					(others.size == 1).if({
-						caller.postUser(Moo.refToObject(others[0]).name.asString + "is here.");
+						caller.postUser(MooObject.mooObject(others[0], object.moo).name.asString + "is here.");
 					}, {
 						(others.size > 1).if({
-							last = Moo.refToObject(others.pop);
-							others = others.collect({|o|  Moo.refToObject(o).name  });
+							last = MooObject.mooObject(others.pop, object.moo);
+							others = others.collect({|o|  MooObject.mooObject(o, object.moo).name  });
 							others = others.join(", ");
 							caller.postUser(others ++", and" + last.name + "are here.");
 						});

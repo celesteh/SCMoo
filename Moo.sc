@@ -150,6 +150,7 @@ Moo {
 		//	newuser = user(username);
 		//});
 
+
 		api.add('newObject', {arg id, name, class, parent, owner, sender, location;
 
 			var obj, user;
@@ -172,6 +173,7 @@ Moo {
 			});
 		});
 
+		//"/MOO/User", 2980, "Les", "Les", 4246
 		api.add('User', {arg id, name, nick, location;
 			var player, loc;
 
@@ -179,19 +181,28 @@ Moo {
 
 			(nick.asString.compare(api.nick.asString) != 0).if({
 				player = users.atIgnoreCase(name);
+				loc = MooObject.mooObject(location, this);
+
 				player.isNil.if({
-					//*new { |moo, name, user, self=false, parent, local, id, location|
-					player = MooPlayer(moo:this, name:name, user:api.getUser(nick), self:false,
-						parent:nil, local:false, id:id, location:location);
-
-					loc = MooObject.mooObject(location, this);
-
-					loc.isKindOf(MooRoom).not.if({
+					loc.isKindOf(MooRoom).not.if({ // if the location is borked, then the lobby
 						loc = lobby;
 					});
+					//*new { |moo, name, user, self=false, parent, local, id, location|
+					player = MooPlayer(moo:this, name:name, user:api.getUser(nick), self:false,
+						parent:nil, local:false, id:id, location:loc);
+
+					//loc = MooObject.mooObject(location, this);
+
+					//loc.isKindOf(MooRoom).not.if({
+					//	loc = lobby;
+					//});
+					//
 					loc.getVerb(\arrive).invoke(player, loc, player, loc); // this will announce arrival n-1 times for N users....., so needs fixing
 				});
-				player.location_(location, api);
+
+				loc.isKindOf(MooRoom).if({ // don't ever move to nil
+					player.location_(location, api);
+				});
 			});
 		});
 

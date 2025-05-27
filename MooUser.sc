@@ -248,12 +248,13 @@ MooPlayer  : MooContainer {
 	//classvar >generic;
 	var  ownedObjects, <>user, <me, <permissions;
 
-	*new { |moo, name, user, self, parent, local, id, location|
+	*new { |moo, name, user, self, parent, local=false, id, location|
 		var uname;
 
 		//"MooPlayer.new".postln;
 
 		self = self ? false;
+		local = local? false;
 		uname = name ? user.notNil.if({ user.nick });
 		self.if({
 			uname = uname ? moo.api.nick;
@@ -261,7 +262,7 @@ MooPlayer  : MooContainer {
 		//*new { |moo, name, maker, parent|
 		parent = this.generic(moo) ? parent;
 
-		^super.new(moo, uname, \this, parent, local, id, location).initPlayer(user, self);
+		^super.new(moo, uname, \this, parent, local, id, location).initPlayer(user, self, local, location);
 	}
 
 
@@ -270,7 +271,7 @@ MooPlayer  : MooContainer {
 		^super.fromJSON(dict, converter, moo).playerRestore(dict, converter, moo);
 	}
 
-	initPlayer {|iuser, self=false|
+	initPlayer {|iuser, self=false, local=false, location|
 
 		var pronouns;
 
@@ -382,8 +383,10 @@ MooPlayer  : MooContainer {
 
 		//});
 
-
-
+		location = MooObject.mooObject(location, moo);
+		location.isKindOf(MooRoom).if({
+			this.location_(location, self.if({this}, { moo.api}))
+		});
 	}
 
 	me_ {
