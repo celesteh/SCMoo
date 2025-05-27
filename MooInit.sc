@@ -187,17 +187,19 @@ MooInit {
 			);
 
 
-			moo.generics[\object].verb_(\drop, \this, \none,
+		moo.generics[\object].verb_(\drop, \this, \none,
 
-				{|dobj, iobj, caller, object|
-					//caller.contents.remove(dobj);
-					caller.remove(dobj);
-					caller.location.announce("% dropped %".format(caller.name, dobj.name), caller);
-					//caller.location.contents = caller.location.contents.add(dobj);
-					caller.location.addObject(dobj);
-				}.asCompileString;
+			{|dobj, iobj, caller, object|
 
-			);
+				//caller.contents.remove(dobj);
+				caller.remove(dobj);
+				caller.location.announce("% dropped %".format(caller.name, dobj.name), caller);
+				//caller.location.contents = caller.location.contents.add(dobj);
+				//caller.location.addObject(dobj);
+				object.move(caller.location);
+			}.asCompileString;
+
+		);
 
 		moo.generics[\object].verb_(\examine, \this, \none,
 			{|dobj, iobj, caller, object|

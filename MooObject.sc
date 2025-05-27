@@ -228,20 +228,11 @@ MooObject : NetworkGui  {
 			});
 
 			dict.atIgnoreCase("location").notNil.if({
+
 				location = this.class.refToObject(dict.atIgnoreCase("location"), converter, moo);
-				location.isKindOf(MooObject).if({
-					location = location.id;
-				});
-				this.property_(\location, location, changer:moo.api);
-				//this.action_(action_owner, {})
-				this.property(\location).action_(moo.api, {
-					this.location.notNil.if({
-						this.location.isKindOf(MooObject).if({
-							this.location.addObject(this, moo.api);
-						});
-					});
-				});
+				this.handleLocationInit(location);
 			});
+
 
 			aliases = aliases ++ dict.atIgnoreCase("aliases").collect({|a| a.asSymbol });
 			immobel = dict.atIgnoreCase("immobel").asBoolean;
@@ -262,12 +253,45 @@ MooObject : NetworkGui  {
 		this.location = location;
 
 		(location.notNil && (location.isKindOf(MooObject))).if({
-			this.location.addObject(this, moo.api.nick);
+			this.location.addObject(this, moo);
 		});
 
 		owner =  MooObject.mooObject(owner, moo);
 		this.networking();
 
+	}
+
+	handleLocationInit{|initialLoc, changer, local=false|
+
+		var quiet;
+
+		quiet = api.silence;
+		api.silence = local.not;
+
+		changer = changer ? moo;
+
+		initialLoc.isNil.if({
+			initialLoc = -1;
+		});
+
+		initialLoc.isKindOf(MooObject).if({
+			initialLoc = initialLoc.id;
+		});
+
+		this.property_(\location, initialLoc, changer:changer);
+		//this.action_(action_owner, {})
+		this.property(\location).action_(moo, {
+
+			"!!! object moving!!!".debug("moo action");
+
+			this.location.notNil.if({
+				this.location.isKindOf(MooObject).if({
+					this.location.addObject(this, moo);
+				});
+			});
+		});
+
+		api.silence = quiet;
 	}
 
 
@@ -371,9 +395,13 @@ MooObject : NetworkGui  {
 				this.property_(\description, "You see nothing special.", true, maker);
 			});
 
-			location = location ? -1;
 			local.if({ changer = maker}, {changer = moo.api});
+			this.handleLocationInit(location, changer, local);
 
+
+
+			/*
+			location = location ? -1;
 			this.property(\location).isNil.if({
 				quiet = api.silence;
 				api.silence = local.not;
@@ -389,6 +417,7 @@ MooObject : NetworkGui  {
 					});
 				});
 			});
+			*/
 
 
 			local.if({
@@ -638,7 +667,7 @@ MooObject : NetworkGui  {
 
 	location_{|loc, changer|
 
-		changer = changer? moo.api.nick;
+		changer = changer? moo.me;
 		//location = loc;
 
 		loc.isKindOf(MooObject).if({
@@ -716,6 +745,7 @@ MooObject : NetworkGui  {
 			this.advertise(property, key, publish, shared.guitype);  //advertise {|property, key, publish|
 			//api.remote_query;
 			property.action_(moo.api, {|prop|
+				"!!!action!!!!".debug(property);
 				moo.api.sendMsg(this.formatKey(key), prop.value, moo.api.nick)
 			});
 
@@ -742,7 +772,7 @@ MooObject : NetworkGui  {
 
 						changed.if({
 							//property.silentValue_(val, moo.api);
-							property.value(moo.api);
+							property.value_(val, moo.api);
 						});
 					})
 				});
@@ -931,29 +961,72 @@ MooObject : NetworkGui  {
 	}
 
 
-	move {|newLocation|
+	move {|newLocation, caller|
 
-		var oldLocation, moved = false;
+		var oldLocation, moved = false, rectify;
+
+		rectify = {|loc|
+
+			{
+
+			"recity loc %".format(loc).debug(this.name);
+
+			loc.isKindOf(Symbol).if({
+				loc = loc.asString;
+			});
+			loc.isKindOf(String).if({
+				loc.isDecimal.if({
+					loc = loc.asInteger;
+				});
+			});
+
+			loc = MooObject.mooObject(loc, moo);
+
+			loc.isNil.if({
+				loc = -1;
+			});
+
+			"loc is %".format(loc).debug(this.name);
+			}.try({|err| err.warn });
+
+			loc
+		};
+
+		"new locastion was %".format(newLocation).debug(this.id);
+
+
 		oldLocation = this.location;
 
-		this.isPlayer.not.if({
-			immobel.not.if({
-				oldLocation.notNil.if({ oldLocation.remove(this) });
-				newLocation.addObject(this);
+		oldLocation = rectify.value(oldLocation);
+		newLocation = rectify.value(newLocation);
+
+		"new locastion is %".format(newLocation).debug(this.id);
+
+		(oldLocation != newLocation).if({
+			this.isPlayer.not.if({
+				immobel.not.if({
+					// not a player - need a container
+					oldLocation.isKindOf(MooContainer).if({ oldLocation.remove(this, caller) });
+					newLocation.isKindOf(MooContainer).if({ newLocation.addObject(this, caller) });
+					moved = true;
+				});
+			} , {
+				// are a player - need a room
+
+				//name = this.property(\name);
+				//oldLocation.player.remove(this);
+				oldLocation.isKindOf(MooRoom).if({ oldLocation.depart(this, oldLocation, this, oldLocation) });
+				// added arrive on Train
+				newLocation.isKindOf(MooRoom).if({ newLocation.arrive(this, newLocation, this, newLocation) });
+
 				moved = true;
 			});
-		} , {
-			//name = this.property(\name);
-			//oldLocation.player.remove(this);
-			oldLocation.notNil.if({ oldLocation.depart(this, oldLocation, this, oldLocation) });
-			// added arrive on Train
-			newLocation.arrive(this, newLocation, this, newLocation);
-
-			moved = true;
 		});
 
 		moved.if({
-			this.location_(newLocation, moo.me);
+			caller = caller ? moo.me;
+
+			this.location_(newLocation, caller);
 		})
 	}
 
@@ -1335,7 +1408,7 @@ MooContainer : MooObject {
 					//playableEnv.put(item.name.asSymbol, item);
 					this.put(item.name.asSymbol, item);
 
-					item.location_(this, moo, api.nick);
+					item.location_(this, moo, caller);
 				});
 
 				shouldBlock.if({
@@ -1438,7 +1511,7 @@ MooContainer : MooObject {
 
 MooRoom : MooContainer {
 
-	var<players, <exits;
+	var <players, <exits;
 
 	*new { |moo, name, maker, parent, local, id|
 
@@ -1569,6 +1642,11 @@ MooRoom : MooContainer {
 		//semaphore.dump;
 
 		semaphore.wait;
+
+		players.isNil.if({
+			players = [];
+		});
+
 		//"add Playwe waited".debug(this.name);
 		players.includes(player).not.if({
 			players = players.add(player);
