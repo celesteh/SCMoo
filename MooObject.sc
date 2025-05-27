@@ -22,6 +22,12 @@ MooProperty {
 		});
 	}
 
+	silent_{|bool|
+		cv.silent_(bool);
+	}
+
+	slient { ^cv.bool }
+
 	action_ { |arg1, arg2|
 		arg1 = arg1 ? \local;
 		cv.action_(arg1, arg2);  //this.action_(action_owner, {})
@@ -212,7 +218,7 @@ MooObject : NetworkGui  {
 						});
 
 						// the changer is the JSON thingee
-						this.property_(key.asSymbol, value, public, converter, mutable);
+						this.property_(key.asSymbol, value, public, converter, mutable, silent:true);
 
 						//"key % value % public % (is a %)".format(key, value, public, public.class).debug(this.class);
 					});
@@ -268,6 +274,7 @@ MooObject : NetworkGui  {
 		});
 
 		owner =  MooObject.mooObject(owner, moo);
+		this.unsilence();
 		this.networking();
 
 	}
@@ -289,7 +296,7 @@ MooObject : NetworkGui  {
 			initialLoc = initialLoc.id;
 		});
 
-		this.property_(\location, initialLoc, changer:changer);
+		this.property_(\location, initialLoc, changer:changer, silent:true);
 		//this.action_(action_owner, {})
 		this.property(\location).action_(moo, {
 
@@ -393,17 +400,17 @@ MooObject : NetworkGui  {
 			//{ "%".format(parent.name).debug(this); }.try;
 			this.pr_superObj_(parent);
 			//"about to copy properties".debug(this);
-			this.pr_copyParentProperties(parent);
+			this.pr_copyParentProperties(parent, local);
 
 
 			//playableEnv = NetworkGui.make(moo.api);
 			//playableEnv.know = true;
 
 
-			this.property_(\name, name, true, maker);//.action_(this, {|v| this.name = v.value });//.value.postln;
+			this.property_(\name, name, true, maker, silent:true);//.action_(this, {|v| this.name = v.value });//.value.postln;
 
 			this.property(\description).isNil.if({
-				this.property_(\description, "You see nothing special.", true, maker);
+				this.property_(\description, "You see nothing special.", true, maker, silent:true);
 			});
 
 			local.if({ changer = maker}, {changer = moo.api});
@@ -448,7 +455,7 @@ MooObject : NetworkGui  {
 			});
 
 			this.networking();
-
+			this.unsilence();
 
 		}); // end test for nil
 	}
@@ -489,6 +496,13 @@ MooObject : NetworkGui  {
 		});
 
 
+	}
+
+	unsilence {
+
+		this.properties.keys.do({|key|
+			properties.at(key).silent = false;
+		});
 	}
 
 
@@ -605,7 +619,7 @@ MooObject : NetworkGui  {
 		^Moo.formatKey(id, key);
 	}
 
-	pr_copyParentProperties{|parent|
+	pr_copyParentProperties{|parent, local|
 
 		var public, superObject, mutable;
 
@@ -627,7 +641,7 @@ MooObject : NetworkGui  {
 						// is it public?
 						public = superObject.isPublic(key);
 						mutable = superObject.property(key).mutable;
-						this.property_(key, superObject.property(key).value, public, mutable:mutable);
+						this.property_(key, superObject.property(key).value, public, mutable:mutable, silent:local.not);
 					});
 				});
 			});
@@ -700,9 +714,12 @@ MooObject : NetworkGui  {
 	}
 
 
-	property_ {|key, ival, publish = true, changer, mutable=true, guitype|
+	property_ {|key, ival, publish = true, changer, mutable=true, guitype, silent = false|
 
 		var shared, property;
+
+		publish = publish ? true;
+		mutable = mutable ? true;
 
 		this.prValidID(key).not.if({
 			MooError("Property must start with a letter and not contain special characters").throw;
@@ -746,6 +763,7 @@ MooObject : NetworkGui  {
 				shared = this.addLocal(this.formatKey(key), ival);
 			});
 			shared.guitype = guitype ? shared.guitype;
+			shared.silent = silent;
 
 			property = MooProperty(shared, mutable);
 
