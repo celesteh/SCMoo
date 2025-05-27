@@ -196,7 +196,7 @@ Moo {
 		});
 
 		api.add(\reqPlayers, {
-			api.sendMsg(\User, me.id, me.name, api.nick, me.property(\location).value);
+			api.sendMsg(\User, me.id, me.name, api.nick, me.property(\location).value.value.value.value);
 		});
 
 		{
