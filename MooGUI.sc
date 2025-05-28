@@ -268,10 +268,12 @@ MooGUI {
 
 		AppClock.sched(0, {
 			//disp.string = disp.string ++ "\n" ++ str;
+			/*
 			(disp.string.size > 6000).if({
 				"truncate".debug(this);
 				disp.string = disp.string.copyRange((disp.string.size - 5000).max(0), disp.string.size +1);
 			});
+			*/
 
 			//disp.respondsTo('setString').if ({
 			//	disp.setString("\n"++str, disp.string.size, 0);
