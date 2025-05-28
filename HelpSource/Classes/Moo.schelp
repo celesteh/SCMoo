@@ -278,22 +278,28 @@ your computers are configured to allow that. Before you start the Moo, start you
 
 
 code::
-n = NetAPI.broadcast("MyName", "Moo");
+n = NetAPI.broadcast("MyName", "MOO");
 ::
 
 If you have access to a Osc Group Server, see the NetAPI help file.
 
 For most users, the easiest way to enable networking involves a Node server. If you are connecting as a client, first open the websocket, then attach the NetAPI.
 code::
-w = MooWebSocketResponder("MyName","password","Moo","OptionalGroupPassword", "https://path.to.server").echo_(true);
+w = MooWebSocketResponder("MyName","password","MOO","OptionalGroupPassword", "https://path.to.server").echo_(true);
 n = NetAPI.other("Les", "moo", path:w);
 ::
 
 How to host the server and make it available to others will be described in the WebSocketResponder helpfile.
 
-Get the JSON from the server and start the Moo
+Get the JSON from the server and start the Moo, running each of these lines separately
 code::
-w = MooWebSocketResponder("MyName","foo","Moo","OptionalGroupPassword", "https://moo.blessing.exchange/osc.html").echo_(true);
-w.getJSON({|json| json.debug("command line"); j = json; });
-Moo.load(j,  NetAPI.other("MyName", "Moo", path:w), \parseText)
+(
+a = "MyName";
+g = "Moo".toUpper;
+
+w = MooWebSocketResponder(a,"password",g,"OptionalGroupPassword", "https://moo.blessing.exchange/osc.html").echo_(true);
+)
+w.getJSON({|json| json.debug("command line"); j = json; "JSON retrieved".postln});
+n = NetAPI.other(a, g, path:w);
+m = Moo.login(n, j, \parseText);
 ::
