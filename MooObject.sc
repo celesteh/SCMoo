@@ -90,7 +90,7 @@ MooObject : NetworkGui  {
 	}
 
 	*new { |moo, name, maker, parent, local=false, id, location|
-		"new obj id %".format(id).debug(this);
+		"new obj id % local %".format(id, local).debug(this);
 		^super.new.initMooObj(moo, name, maker, parent ? this.generic(moo), local, id, location);
 	}
 
@@ -318,6 +318,8 @@ MooObject : NetworkGui  {
 		var /*name,*/ superID, superKey, public, str, time, quiet, changer;
 
 		local = local ? false;
+
+		"local is %".format(local).debug(this);
 
 		iname.notNil.if({
 
@@ -621,9 +623,11 @@ MooObject : NetworkGui  {
 		^Moo.formatKey(id, key);
 	}
 
-	pr_copyParentProperties{|parent, local|
+	pr_copyParentProperties{|parent, local=false|
 
-		var public, superObject, mutable;
+		var public, superObject, mutable, silent;
+
+		silent = local.not; // if local is true, then silent is false;
 
 		superObj.isNil.if({
 			//superObj =
@@ -643,7 +647,7 @@ MooObject : NetworkGui  {
 						// is it public?
 						public = superObject.isPublic(key);
 						mutable = superObject.property(key).mutable;
-						this.property_(key, superObject.property(key).value, public, mutable:mutable, silent:local.not);
+						this.property_(key, superObject.property(key).value, public, mutable:mutable, silent:silent);
 					});
 				});
 			});
@@ -722,6 +726,7 @@ MooObject : NetworkGui  {
 
 		publish = publish ? true;
 		mutable = mutable ? true;
+		silent = silent ? false;
 
 		this.prValidID(key).not.if({
 			MooError("Property must start with a letter and not contain special characters").throw;
@@ -754,7 +759,7 @@ MooObject : NetworkGui  {
 		}, {
 
 			publish.if({
-				shared = this.addShared(this.formatKey(key), ival, owned:false);
+				shared = this.addShared(this.formatKey(key), ival, owned:false, silent:silent);
 				//shared = this.addRemote(this.formatKey(key));//, ival);
 				//shared.value_(ival, moo);
 				//api.add("property/%".format(this.id).asSymbol,
@@ -1332,7 +1337,7 @@ MooContainer : MooObject {
 	var <contents, semaphore;
 
 	*new { |moo, name, maker, parent, local, id, location|
-
+		"new MooContainer".debug(name);
 		^super.new(moo, name, maker, parent ? this.generic(moo), local, id, location).initContainer();
 	}
 

@@ -251,7 +251,7 @@ MooPlayer  : MooContainer {
 	*new { |moo, name, user, self, parent, local=false, id, location|
 		var uname;
 
-		//"MooPlayer.new".postln;
+		"MooPlayer.new".debug(name);
 
 		self = self ? false;
 		local = local? false;
