@@ -303,9 +303,10 @@ MooObject : NetworkGui  {
 			"!!! object moving!!!".debug("moo action");
 
 			this.location.notNil.if({
-				this.location.isKindOf(MooObject).if({
-					this.location.addObject(this, moo);
-				});
+				//this.location.isKindOf(MooObject).if({
+				//this.location.addObject(this, moo);
+				this.move(this.location, moo);
+				//});
 			});
 		});
 
@@ -329,10 +330,10 @@ MooObject : NetworkGui  {
 			});
 		});
 
-			aliases = [];
-			verbs = IdentityDictionary();
-			properties = IdentityDictionary();
-			immobel = false;
+		aliases = [];
+		verbs = IdentityDictionary();
+		properties = IdentityDictionary();
+		immobel = false;
 
 
 
@@ -420,19 +421,19 @@ MooObject : NetworkGui  {
 			/*
 			location = location ? -1;
 			this.property(\location).isNil.if({
-				quiet = api.silence;
-				api.silence = local.not;
-				this.property_(\location, location, changer:changer); // don't announce a wrong location
-				//this.action_(action_owner, {})
-				api.silence = quiet;
+			quiet = api.silence;
+			api.silence = local.not;
+			this.property_(\location, location, changer:changer); // don't announce a wrong location
+			//this.action_(action_owner, {})
+			api.silence = quiet;
 			});
 			this.property(\location).action_(moo.api, {
-				"put in %".format(this.location).debug(name);
-				this.location.notNil.if({
-					(this.location.isKindOf(MooObject)).if({
-						this.location.addObject(this, moo.api);
-					});
-				});
+			"put in %".format(this.location).debug(name);
+			this.location.notNil.if({
+			(this.location.isKindOf(MooObject)).if({
+			this.location.addObject(this, moo.api);
+			});
+			});
 			});
 			*/
 
@@ -491,8 +492,27 @@ MooObject : NetworkGui  {
 		//		}.value(*input);
 		//});
 
+		//moo.api.sendMsg ("move/%".format(this.id).asSymbol, newLocation.id, oldId, moo.api.nick);
+		api.add("move/%".format(this.id).asSymbol, {|where, whence, origin|
+			var from;
 
-	}
+			(origin.toString.compare(moo.api.nick.toString) != 0).if({
+				{
+					whence.notNil.if({
+						whence= whence.asInteger;
+						(whence > 0).if({
+							from = whence;
+						})
+					})
+				}.try;
+
+				this.move(where, moo.api, from);
+			});
+		});
+
+	} // end networking()
+
+
 
 	advertise {|property, key, publish, guitype, silent = true|
 		silent.not.if({
@@ -677,10 +697,10 @@ MooObject : NetworkGui  {
 			// starts with a number
 			key[0].isAlpha.not.if({ valid = false; });
 
-				// reserved word
-				(key.compare("public", true) == 0).if({
-					valid = false;
-				});
+			// reserved word
+			(key.compare("public", true) == 0).if({
+				valid = false;
+			});
 		} , {
 			// whatever else is happening here is weird and I don't like it
 			valid = false;
@@ -790,7 +810,7 @@ MooObject : NetworkGui  {
 			silent.not.if({
 				"not silent".debug(this.id);
 				this.advertise(property, key, publish, shared.guitype, silent);  //advertise {|property, key, publish|
-			//api.remote_query;
+				//api.remote_query;
 			});
 
 			property.action_(moo.api, {|prop|
@@ -835,10 +855,10 @@ MooObject : NetworkGui  {
 		});
 		/*
 		api.add("property/%".format(this.id).asSymbol,
-			{arg key, ival, publish = true, changer, mutable=true, guitype, origin;
-				(origin != moo.api.nick).if({
-					this.property_(key, ival, publish = true, changer, mutable=true, guitype);
-				});
+		{arg key, ival, publish = true, changer, mutable=true, guitype, origin;
+		(origin != moo.api.nick).if({
+		this.property_(key, ival, publish = true, changer, mutable=true, guitype);
+		});
 		});
 		*/
 
@@ -1011,9 +1031,9 @@ MooObject : NetworkGui  {
 	}
 
 
-	move {|newLocation, caller|
+	move {|newLocation, caller, oldlocation|
 
-		var oldLocation, moved = false, rectify;
+		var oldLocation, moved = false, rectify, locClass, oldId= -1, doMsg = false;
 
 		rectify = {|loc|
 
@@ -1045,40 +1065,82 @@ MooObject : NetworkGui  {
 		"new locastion was %".format(newLocation).debug(this.id);
 
 
-		oldLocation = this.location;
+		oldLocation = oldlocation ? this.location;
 
 		oldLocation = rectify.value(oldLocation);
 		newLocation = rectify.value(newLocation);
 
 		"new locastion is %".format(newLocation).debug(this.id);
 
-		(oldLocation != newLocation).if({
-			this.isPlayer.not.if({
-				immobel.not.if({
-					// not a player - need a container
-					oldLocation.isKindOf(MooContainer).if({ oldLocation.remove(this, caller, false) });
-					newLocation.isKindOf(MooContainer).if({ newLocation.addObject(this, caller) });
-					moved = true;
-				});
-			} , {
-				// are a player - need a room
+		//(oldLocation != newLocation).if({
 
-				newLocation.isKindOf(MooRoom).if({
-					//name = this.property(\name);
-					//oldLocation.player.remove(this);
-					oldLocation.isKindOf(MooRoom).if({ oldLocation.depart(this, oldLocation, this, oldLocation) });
+
+		this.isPlayer.not.if({
+			immobel.not.if({
+				// not a player - need a container
+				moved = newLocation.isKindOf(MooContainer).if({ newLocation.addObject(this, caller) });
+				((oldLocation != newLocation) && moved ).if({
+					oldLocation.isKindOf(MooContainer).if({
+						oldLocation.remove(this, caller, false);
+						oldId = oldLocation.id;
+					});
+
+					doMsg = true;
+
+
+				});
+
+				//moved = true;
+			});
+		} , {
+			// are a player - need a room
+			"% is a player".format(this.name).debug("MooObject.move");
+
+			newLocation.isKindOf(MooRoom).if({
+
+				"% is a room".format(newLocation.name).debug("MooObject.move");
+				//name = this.property(\name);
+				//oldLocation.player.remove(this);
+
+				(this.me &&  (oldLocation != newLocation)).if({
+
+					oldLocation.isKindOf(MooRoom).if({
+						oldLocation.depart(this, oldLocation, this, oldLocation);
+						oldId = oldLocation.id;
+					});
 					// added arrive on Train
 					newLocation.arrive(this, newLocation, this, newLocation);
-
 					moved = true;
+
+					// just tell people to move this player
+					doMsg = true;
+					//moo.api.sendMsg ("move/%".format(this.id).asSymbol, newLocation.id, oldId, moo.api.nick);
+
+				} , {
+					// just move quietly
+					(oldLocation != newLocation).if({
+						oldLocation.isKindOf(MooRoom).if({ oldLocation.removePlayer(this); });
+					});
+					moved = newLocation.addPlayer(this);
 				});
+
+				//moved = true;
 			});
 		});
+		//});
+
+		moved.if({ "move of % happened".format(this.name).debug("MooObject.move") },
+			{ "move of % failed".format(this.name).debug("MooObject.move") });
 
 		moved.if({
 			caller = caller ? moo.me;
 
+			//{ this.property(\location).silence = false; }.try; //this is not reliably containerised
+			{ properties[\location].silence = false; }.try;
 			this.location_(newLocation, caller);
+			doMsg.if({
+				moo.api.sendMsg ("move/%".format(this.id).asSymbol, newLocation.id, oldId, moo.api.nick);
+			});
 		})
 	}
 
@@ -1392,7 +1454,7 @@ MooContainer : MooObject {
 
 		key.isNil.if({
 			//this.findObj(item).if({
-				key = item.asString.asSymbol;
+			key = item.asString.asSymbol;
 			//});
 		});
 
@@ -1451,19 +1513,19 @@ MooContainer : MooObject {
 					semaphore.wait;
 				});
 
-				//"addObject waited".debug(this.name);
+				"addObject waited".debug(this.name);
 
 				old_location.notNil.if({
 					removed = old_location.remove(item, caller);
 				});
 
-				removed.notNil.if({
+				//removed.notNil.if({
 					contents = contents.add(item);
 					//playableEnv.put(item.name.asSymbol, item);
 					this.put(item.name.asSymbol, item);
 
 					item.location_(this, moo, caller);
-				});
+				//});
 
 				shouldBlock.if({
 					semaphore.signal;
@@ -1691,8 +1753,11 @@ MooRoom : MooContainer {
 		semaphore.wait;
 		//"removePlayer.waited".debug(this.name);
 		//players.size.debug(this.name);
+		"Remove %".format(player.name).debug(this.name);
+
 		mooPlayers.remove(player);
-		//players.debug(this.name);
+
+		players.debug(this.name);
 		//playableEnv.remove(player);
 		this.remove(player, player, false);
 		semaphore.signal;
@@ -1719,6 +1784,8 @@ MooRoom : MooContainer {
 		//"this.put(player.name.asSymbol, player); done".debug(this.name);
 		semaphore.signal;
 		//"addPlayer signaled".debug(this.name);
+
+		^true; // return success
 	}
 
 	exit{|key|
@@ -1742,21 +1809,21 @@ MooRoom : MooContainer {
 		/*
 		search = {|arr|
 
-			arr.do({|obj|
+		arr.do({|obj|
 
 
-				obj.matches(key).if({
+		obj.matches(key).if({
 
-					found = obj;
-				})
-			});
+		found = obj;
+		})
+		});
 
-			found;
+		found;
 		};
 
 		found = search.(contents);
 		found.isNil.if({
-			found = search.(players);
+		found = search.(players);
 		});
 
 		^found;

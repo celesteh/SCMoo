@@ -74,7 +74,7 @@ MooParser {
 
 		//"location % ".format(speaker.location).debug("MooParser init");
 
-		actor.name.debug(this);
+		//actor.name.debug(this);
 
 		this.movement().not.if({
 			this.creation().not.if({
@@ -106,7 +106,7 @@ MooParser {
 
 		var thing, matched = false, index, switch, clone;
 
-		"creation".debug(this);
+		//"creation".debug(this);
 
 		(verb.asString.toLower.asSymbol == \make).if({
 
@@ -149,7 +149,7 @@ MooParser {
 				};
 
 				matched = switch.(dobj.toLower.asSymbol, iobj);
-				"matched %".format(matched).debug(this);
+				//"matched %".format(matched).debug(this);
 				matched.not.if({
 					iobj.isNil.if({
 						matched = switch.(\object, dobj.asSymbol);
@@ -794,8 +794,8 @@ MooVerb{
 
 		str = func.value;
 
-		"inovke".debug(verb);
-		str.debug(verb);
+		//"inovke".debug(verb);
+		//str.debug(verb);
 
 		this.pass(str).not.if({
 			MooReservedWordError("Verb contains disallowed commands", this.check(str)).throw;
@@ -804,7 +804,7 @@ MooVerb{
 		//"invoke".postln;
 		f = str.compile.value; // "{|a| a.post}".compile.value returns a function
 
-		"compiled".debug(verb);
+		//"compiled".debug(verb);
 
 		object.notNil.if({
 			clock = object.getClock;
@@ -814,7 +814,7 @@ MooVerb{
 			});
 		});
 
-		"got clock".debug(verb);
+		//"got clock".debug(verb);
 
 		{f.value(dobj, iobj, caller, object);}.fork( * clock);
 

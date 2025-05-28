@@ -144,14 +144,14 @@ MooInit {
 					});
 
 					(keys.size == 0).if({
-						caller.postUser("% has no verbs.".format(object.name));
+						caller.postUser("% has no verbs.".format(object.name), caller);
 					}, {
 						(keys.size == 1).if({
-							caller.postUser("% has a verb: %.".format(object.name, keys.first));
+							caller.postUser("% has a verb: %.".format(object.name, keys.first), caller);
 						}, {
 							// more than 1
 							caller.postUser("% has the verbs: %, and %."
-								.format(object.name, keys.copyRange(0, keys.size-2).join(", "), keys.last));
+								.format(object.name, keys.copyRange(0, keys.size-2).join(", "), keys.last), caller);
 						})
 					})
 				}
@@ -162,7 +162,7 @@ MooInit {
 
 				{|dobj, iobj, caller, object|
 					//object.description.postln;
-					caller.postUser(object.description.value);
+				caller.postUser(object.description.value + "\n", caller);
 				}.asCompileString;
 
 			);
@@ -205,7 +205,7 @@ MooInit {
 			{|dobj, iobj, caller, object|
 
 				caller.postUser("% ID %\nAliases %\nProperties %".format(object.name, object.id,
-					object.aliases, object.properties.keys.asArray));
+					object.aliases, object.properties.keys.asArray), caller);
 
 			}.asCompileString;
 		);
@@ -238,7 +238,7 @@ MooInit {
 					});
 					str.notNil.if({
 						//str.debug(object);
-						caller.postUser(str);
+						caller.postUser(str, caller);
 					} , {
 						"Should not be nil".warn;
 					});
@@ -339,7 +339,7 @@ MooInit {
 				"arrive".debug(object.name);
 				caller.isPlayer.if({
 					//"caller. is a player".debug(object.name);
-						object.announce("With a dramatic flourish, % enters".format(caller.name));
+						object.announceExcluding(caller, "With a dramatic flourish, % enters".format(caller.name), caller);
 						//players = players.add(caller);
 						//caller.dumpStack;
 						object.addPlayer(caller);
@@ -359,7 +359,7 @@ MooInit {
 
 						//players.remove(caller);
 						object.removePlayer(caller);
-						object.announce("With a dramatic flounce, % departs".format(caller.name));
+						object.announceExcluding(caller, "With a dramatic flounce, % departs".format(caller.name), caller);
 
 					});
 				}.asCompileString;
@@ -372,40 +372,41 @@ MooInit {
 			{|dobj, iobj, caller, object|
 				var stuff, others, last, exits;
 				//object.description.postln;
-				caller.postUser(object.name.asString +"\n" + object.description.value);
+				caller.postUser(object.name.asString +"\n" + object.description.value, caller);
 				(object == caller.location).if({
 					stuff = object.contents;
 					//"stuff".debug(object);
 					(stuff.size > 0).if({
 						stuff = stuff.collect({|o| MooObject.mooObject(o, object.moo).name });
 						stuff = stuff.join(", ");
-						caller.postUser("You see:" + stuff);
+						caller.postUser("You see:" + stuff, caller);
 					});
 					others = object.mooPlayers.select({|player| player != caller });
 					(others.size == 1).if({
-						caller.postUser(MooObject.mooObject(others[0], object.moo).name.asString + "is here.");
+						caller.postUser(MooObject.mooObject(others[0], object.moo).name.asString + "is here.", caller);
 					}, {
 						(others.size > 1).if({
 							last = MooObject.mooObject(others.pop, object.moo);
 							others = others.collect({|o|  MooObject.mooObject(o, object.moo).name  });
 							others = others.join(", ");
-							caller.postUser(others ++", and" + last.name + "are here.");
+							caller.postUser(others ++", and" + last.name + "are here.", caller);
 						});
 					});
 					exits = object.exits.keys.asList;
 					(exits.size == 1).if({
 						//"one exit %".format(exits.first).debug(object);
-						caller.postUser("You can exit" + exits[0].asString);
+						caller.postUser("You can exit" + exits[0].asString, caller);
 					}, {
 						(exits.size > 1).if({
-							caller.postUser("Exits are:" + exits.join(", "));
+							caller.postUser("Exits are:" + exits.join(", "), caller);
 						}, {
 							(exits.size==0).if({
-								caller.postUser("There is no way out.");
+								caller.postUser("There is no way out.", caller);
 							});
 						});
 					});
 				});
+				caller.postUser("", caller);
 			}.asCompileString;
 
 		);
@@ -449,7 +450,7 @@ MooInit {
 					});
 					str.notNil.if({
 						//str.debug(object);
-						caller.postUser(str);
+						caller.postUser(str, caller);
 					} , {
 						"Should not be nil".warn;
 					});
@@ -475,13 +476,13 @@ MooInit {
 			{|dobj, iobj, caller, object|
 				caller.location.announceExcluding(caller, "% says, \"%\"".format(caller.name,
 					dobj.asString.stripEnclosingQuotes), caller);
-				caller.postUser("You say,  \"%\"".format(dobj.asString.stripEnclosingQuotes));
+				caller.postUser("You say,  \"%\"".format(dobj.asString.stripEnclosingQuotes), caller);
 			}.asCompileString;
 		);
 
 		moo.generics[\player].verb_(\pose, \this, \any,
 			{|dobj, iobj, caller, object|
-				caller.location.announce("% %".format(caller.name, dobj.asString.stripEnclosingQuotes));
+				caller.location.announce("% %".format(caller.name, dobj.asString.stripEnclosingQuotes), caller);
 			}.asCompileString;
 		);
 
@@ -508,7 +509,7 @@ MooInit {
 				});
 				str.notNil.if({
 					//str.debug(object);
-					caller.postUser(str);
+					caller.postUser(str, caller);
 				} , {
 					"Should not be nil".warn;
 				});
@@ -527,7 +528,7 @@ MooInit {
 				});
 
 				caller.move(room, caller);
-				caller.location.announceExcluding(caller, "With a puff of smoke and flash of light, % appears.".format(caller.name));
+				caller.location.announceExcluding(caller, "With a puff of smoke and flash of light, % appears.".format(caller.name), caller);
 
 			}.asCompileString;
 		);
@@ -573,8 +574,8 @@ MooInit {
 					});
 					caller.location.announceExcluding([caller, object], str, caller);
 
-					caller.postUser("You gave % to %.".format(oname, receiver));
-					object.postUser("% gave you %.".format(caller.name, oname));
+					caller.postUser("You gave % to %.".format(oname, receiver), caller);
+					object.postUser("% gave you %.".format(caller.name, oname), caller);
 				} , {
 
 					str = "% tried and failed to give % to %.".format(caller.name, oname, receiver);
@@ -583,12 +584,12 @@ MooInit {
 						(caller.location != object.location).if({
 							object.location.announceExcluding([caller, object], str, caller);
 						});
-						object.postUser("% grandiosely tried to give you %, but failed.".format(caller.name, oname));
+						object.postUser("% grandiosely tried to give you %, but failed.".format(caller.name, oname), caller);
 					});
 
 					// tell the caller's onlookers
 					caller.location.announceExcluding([caller, object], str, caller);
-					caller.postUser("You flailing tried to give % to %, but failed.".format(oname, receiver));
+					caller.postUser("You flailing tried to give % to %, but failed.".format(oname, receiver), caller);
 				});
 
 
