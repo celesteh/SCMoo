@@ -72,7 +72,7 @@ MooParser {
 
 		//"parsed".postln;
 
-		"actor % input %".format(actor, input
+		//"actor % input %".format(actor, input)
 
 		//"location % ".format(speaker.location).debug("MooParser init");
 
