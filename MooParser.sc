@@ -94,7 +94,7 @@ MooParser {
 				place = actor.location.exit(verb);
 				place.notNil.if({
 					//"move".debug(this);
-					{ actor.move(place); }.fork;
+					{ actor.move(place, actor); }.fork;
 					matched = true
 				});
 			});

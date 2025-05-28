@@ -1019,24 +1019,24 @@ MooObject : NetworkGui  {
 
 			{
 
-			"recity loc %".format(loc).debug(this.name);
+				"recity loc %".format(loc).debug(this.name);
 
-			loc.isKindOf(Symbol).if({
-				loc = loc.asString;
-			});
-			loc.isKindOf(String).if({
-				loc.isDecimal.if({
-					loc = loc.asInteger;
+				loc.isKindOf(Symbol).if({
+					loc = loc.asString;
 				});
-			});
+				loc.isKindOf(String).if({
+					loc.isDecimal.if({
+						loc = loc.asInteger;
+					});
+				});
 
-			loc = MooObject.mooObject(loc, moo);
+				loc = MooObject.mooObject(loc, moo);
 
-			loc.isNil.if({
-				loc = -1;
-			});
+				loc.isNil.if({
+					loc = -1;
+				});
 
-			"loc is %".format(loc).debug(this.name);
+				"loc is %".format(loc).debug(this.name);
 			}.try({|err| err.warn });
 
 			loc
@@ -1068,7 +1068,7 @@ MooObject : NetworkGui  {
 					//oldLocation.player.remove(this);
 					oldLocation.isKindOf(MooRoom).if({ oldLocation.depart(this, oldLocation, this, oldLocation) });
 					// added arrive on Train
-					newLocation.if({ newLocation.arrive(this, newLocation, this, newLocation) });
+					newLocation.arrive(this, newLocation, this, newLocation);
 
 					moved = true;
 				});
