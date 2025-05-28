@@ -23,6 +23,7 @@ Moo {
 			//newLocation.arrive(this, newLocation, this, newLocation);
 				//moo.lobby.arrive(moo.me,moo.lobby, moo.me, moo.lobby);
 			moo.lobby.getVerb(\arrive).invoke(moo.me, moo.lobby, moo.me, moo.lobby);
+			//moo.me.login(moo.me, moo.lobbj, moo.me, moo.me);
 		});
 		^moo;
 	}
@@ -197,11 +198,16 @@ Moo {
 					//	loc = lobby;
 					//});
 					//
-					loc.getVerb(\arrive).invoke(player, loc, player, loc); // this will announce arrival n-1 times for N users....., so needs fixing
+					//loc.getVerb(\arrive).invoke(player, loc, player, loc); // this will announce arrival n-1 times for N users....., so needs fixing
+					me.postUser("% is logged in.".format(name));
 				});
 
 				loc.isKindOf(MooRoom).if({ // don't ever move to nil
-					player.location_(location, api);
+					player.location_(loc, api);
+					loc.addPlayer(player);
+					//player.move(loc, api);
+				}, {
+					"% is not a location".format(location).debug("api.add User");
 				});
 			});
 		});

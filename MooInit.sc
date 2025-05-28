@@ -467,7 +467,7 @@ MooInit {
 		//no testing if they're already set. These methods shouldn't be changed except by an end user
 		moo.generics[\player].verb_(\tell, \this, \any,
 			{|dobj, iobj, caller, object|
-				dobj.postUser(iobj.asString, caller);
+				object.postUser(iobj.asString, caller);
 			}.asCompileString;
 		);
 
@@ -514,6 +514,22 @@ MooInit {
 				});
 			}.asCompileString;
 
+		);
+
+		moo.generics[\player].verb_(\login, \this, \any,
+			{|dobj, iobj, caller, object|
+				var room;
+
+				iobj.isKindOf(MooRoom).if({
+					room = iobj;
+				}, {
+					room = object.moo.lobby;
+				});
+
+				caller.move(room, caller);
+				caller.location.announceExcluding(caller, "With a puff of smoke and flash of light, % appears.".format(caller.name));
+
+			}.asCompileString;
 		);
 
 		moo.generics[\player].verb_(\give, \any, \this,

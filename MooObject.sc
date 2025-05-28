@@ -411,9 +411,6 @@ MooObject : NetworkGui  {
 
 			this.property_(\name, name, true, maker, silent:true);//.action_(this, {|v| this.name = v.value });//.value.postln;
 
-			this.property(\description).isNil.if({
-				this.property_(\description, "You see nothing special.", true, maker, silent:true);
-			});
 
 			local.if({ changer = maker}, {changer = moo.api});
 			this.handleLocationInit(location, changer, local);
@@ -443,6 +440,8 @@ MooObject : NetworkGui  {
 			local.if({
 				parent = this[\parent].value;
 
+				this.pr_copyParentProperties(parent, local);
+
 				"parent % % %".format(this, this.name, parent).debug(this);
 
 				parent.isKindOf(MooObject).if({
@@ -456,6 +455,11 @@ MooObject : NetworkGui  {
 				api.sendMsg('newObject', this.id, name, this.class, parent, owner, api.nick, location);
 			});
 
+			this.property(\description).isNil.if({
+				this.property_(\description, "You see nothing special.", true, maker, silent:true);
+			});
+
+
 			this.networking();
 			this.unsilence();
 
@@ -463,7 +467,7 @@ MooObject : NetworkGui  {
 	}
 
 
-	networking {
+	networking {|silent = false|
 
 
 		//key, ival, publish = true, changer, mutable=true, guitype|
@@ -490,13 +494,14 @@ MooObject : NetworkGui  {
 
 	}
 
-	advertise {|property, key, publish, guitype|
-
-		property.notNil.if({
-			api.sendMesg("property/%".format(this.id).asSymbol, key, property.value, publish, api.nick,
-				property.mutable, guitype);
+	advertise {|property, key, publish, guitype, silent = true|
+		silent.not.if({
+			"advertising".debug(this.id);
+			property.notNil.if({
+				api.sendMesg("property/%".format(this.id).asSymbol, key, property.value, publish, api.nick,
+					property.mutable, guitype);
+			});
 		});
-
 
 	}
 
@@ -755,7 +760,11 @@ MooObject : NetworkGui  {
 			// overwrite. Send notification
 			//"overwrite %".format(key).debug(this.id);
 			shared = properties.at(key);
-			shared.value_(ival, changer);
+			silent.if({
+				shared.silentValue_(ival, changer);
+			} , {
+				shared.value_(ival, changer);
+			});
 		}, {
 
 			publish.if({
@@ -778,8 +787,12 @@ MooObject : NetworkGui  {
 			this.put(key, shared); // make sure it's accessible with out the ID
 
 			//advertise {|property, key, publish, guitype|
-			this.advertise(property, key, publish, shared.guitype);  //advertise {|property, key, publish|
+			silent.not.if({
+				"not silent".debug(this.id);
+				this.advertise(property, key, publish, shared.guitype, silent);  //advertise {|property, key, publish|
 			//api.remote_query;
+			});
+
 			property.action_(moo.api, {|prop|
 				"!!!action!!!!".debug(property);
 				moo.api.sendMsg(this.formatKey(key), prop.value, moo.api.nick)
@@ -814,8 +827,9 @@ MooObject : NetworkGui  {
 				});
 			});
 
-			moo.api.sendMsg("property/%".format(this.id).asSymbol,
-				key, property.value, publish,  moo.api.nick,  mutable, guitype, moo.api.nick);
+			// covered by advertise above
+			//moo.api.sendMsg("property/%".format(this.id).asSymbol,
+			//	key, property.value, publish,  moo.api.nick,  mutable, guitype, moo.api.nick);
 
 
 		});
@@ -1646,8 +1660,12 @@ MooRoom : MooContainer {
 			excluded = [excluded];
 		});
 
+		excluded.debug(this.name);
+
 		mooPlayers.do({|player|
+			"player".debug(this.name);
 			(excluded.includes(player)).not.if({ // if the excluded list does NOT container the player
+				"post".debug(this.name);
 				player.postUser(str);
 			});
 		});
