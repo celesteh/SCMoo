@@ -170,6 +170,7 @@ Moo {
 
 					obj = class.asSymbol.asClass.new(this, name, user, this.at(parent), false, id, location);
 					//this.add(obj, name, id, false);
+					obj.networking;
 				});
 			});
 		});

@@ -196,7 +196,7 @@ MooInit {
 				caller.location.announce("% dropped %".format(caller.name, dobj.name), caller);
 				//caller.location.contents = caller.location.contents.add(dobj);
 				//caller.location.addObject(dobj);
-				object.move(caller.location);
+				object.move(caller.location, caller);
 			}.asCompileString;
 
 		);

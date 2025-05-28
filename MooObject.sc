@@ -439,6 +439,9 @@ MooObject : NetworkGui  {
 
 
 			local.if({
+
+				//"LOCAL".debug("new object");
+
 				parent = this[\parent].value;
 
 				this.pr_copyParentProperties(parent, local);
@@ -496,7 +499,11 @@ MooObject : NetworkGui  {
 		api.add("move/%".format(this.id).asSymbol, {|where, whence, origin|
 			var from;
 
-			(origin.toString.compare(moo.api.nick.toString) != 0).if({
+			"got move request % % %".format(whence, where, origin).debug(this.name);
+
+			//(origin.toString.compare(moo.api.nick.toString) != 0).if({
+			(origin != moo.api.nick).if({
+				"not sent by me".debug(this.name);
 				{
 					whence.notNil.if({
 						whence= whence.asInteger;
@@ -1085,6 +1092,7 @@ MooObject : NetworkGui  {
 						oldId = oldLocation.id;
 					});
 
+					"moved %".format(this.name).debug("MooObject.move");
 					doMsg = true;
 
 
@@ -1492,7 +1500,7 @@ MooContainer : MooObject {
 
 		// check if the item can move
 
-		//"addObject".debug(this.name);
+		"addObject".debug(this.name);
 
 		item.immobel.if({
 			caller.isKindOf(MooPlayer).if({
@@ -1508,7 +1516,7 @@ MooContainer : MooObject {
 
 			(old_location != this).if({
 
-				//"addObject wait".debug(this.name);
+				"addObject wait".debug(this.name);
 				shouldBlock.if({
 					semaphore.wait;
 				});
@@ -1531,6 +1539,27 @@ MooContainer : MooObject {
 					semaphore.signal;
 				});
 				//"addObject signaled".debug(this.name);
+			} , {
+				// old_location is this
+				"addObject wait".debug(this.name);
+				shouldBlock.if({
+					semaphore.wait;
+				});
+
+				contents.includes(item).not.if({
+					// we don't actually have the thing
+					contents = contents.add(item);
+					//playableEnv.put(item.name.asSymbol, item);
+					this.put(item.name.asSymbol, item);
+
+					item.location_(this, moo, caller);
+				});
+
+				shouldBlock.if({
+					semaphore.signal;
+				});
+
+
 			});
 		});
 
