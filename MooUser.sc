@@ -316,59 +316,6 @@ MooPlayer  : MooContainer {
 			}); //uses a property so doesn't need to be published
 			});*/
 
-		/*
-
-		this.verb_(\tell, \this, \any,
-			{|dobj, iobj, caller, object|
-				dobj.postUser(iobj.asString, caller);
-			}.asCompileString;
-		);
-
-		this.verb_(\say, \this, \any,
-			{|dobj, iobj, caller, object|
-				caller.location.announceExcluding(caller, "% says, \"%\"".format(caller.name,
-					dobj.asString.stripEnclosingQuotes), caller);
-				caller.postUser("You say,  \"%\"".format(dobj.asString.stripEnclosingQuotes));
-			}.asCompileString;
-		);
-
-		this.verb_(\pose, \this, \any,
-			{|dobj, iobj, caller, object|
-				caller.location.announce("% %".format(caller.name, dobj.asString.stripEnclosingQuotes));
-			}.asCompileString;
-		);
-
-		this.verb_(\inventory, \this, \none,
-
-			{|dobj, iobj, caller, object|
-				var str, last;
-				//object.description.postln;
-				(caller.contents.size == 0).if({
-					str = "You are not holding anything.";
-				}, {
-					(caller.contents.size == 1).if({
-						str = "You are holding: %.".format(caller.contents[0].name);
-					}, {
-						(caller.contents.size > 1).if({
-							last = caller.contents.last;
-							str =  "You are holding: % and %.".format(
-								caller.contents.copyRange(0, caller.contents.size-2)
-								.collect({|c| c.name }).asList.join(", "),
-								last.name
-							);
-						})
-					})
-				});
-				str.notNil.if({
-					//str.debug(object);
-					caller.postUser(str);
-				} , {
-					"Should not be nil".warn;
-				});
-			}.asCompileString;
-
-		);
-		*/
 
 
 
@@ -409,9 +356,18 @@ MooPlayer  : MooContainer {
 
 	postUser {|str, caller|
 
-		var key = Moo.formatKey(id, \post);
+		var callerID, shouldPost=false, key = Moo.formatKey(id, \post);
 
-		"postUsr: %".format(str).debug(this.id);
+		//id is just for debugging
+		caller.notNil.if({
+			callerID = caller.id;
+		} , {
+			me.if({
+				callerID = this.id;
+			})
+		});
+
+		"postUsr: from % : %".format(callerID, str).debug(this.id);
 
 		//"in post".postln;
 		// post is always local ARG NO IT's NOT . . . wait, is it? i don't fucking know....
@@ -419,10 +375,17 @@ MooPlayer  : MooContainer {
 		//	str.postln;
 		//}, {
 			// do the api call? - only if we've originated the need for it
-		((caller == this)||me).if({
+		caller.isKindOf(MooPlayer).if({
+			shouldPost = caller.me
+		});
+
+		shouldPost = shouldPost || me || (caller == this);
+
+		//((caller == this)||me || caller.me).if({
+		shouldPost.if({
 				moo.api.sendMsg(key, this.id, str);
 		},{
-			"dont's post".debug(this);
+			"only post if I call it".debug(this);
 		});
 		//});
 	}

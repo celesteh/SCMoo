@@ -203,6 +203,7 @@ Moo {
 				});
 
 				loc.isKindOf(MooRoom).if({ // don't ever move to nil
+					"adding % to %".format(name, location).debug("api.add User");
 					player.location_(loc, api);
 					loc.addPlayer(player);
 					//player.move(loc, api);

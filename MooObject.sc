@@ -1638,6 +1638,8 @@ MooRoom : MooContainer {
 
 		//"anounce %".format(str).debug(this.name);
 
+		caller = caller ? moo.me;
+
 		mooPlayers.do({|player|
 			"paleyer %".format(player.name).debug(this.name);
 			player.postUser(str, caller);
@@ -1656,17 +1658,19 @@ MooRoom : MooContainer {
 	announceExcluding{|excluded, str, caller|
 		var tell;
 
+		caller = caller ? moo.me;
+
 		excluded.isKindOf(MooObject).if({
 			excluded = [excluded];
 		});
 
-		excluded.debug(this.name);
+		//excluded.debug(this.name);
 
 		mooPlayers.do({|player|
-			"player".debug(this.name);
+			//"player".debug(this.name);
 			(excluded.includes(player)).not.if({ // if the excluded list does NOT container the player
-				"post".debug(this.name);
-				player.postUser(str);
+				//"post".debug(this.name);
+				player.postUser(str, caller);
 			});
 		});
 

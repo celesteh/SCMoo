@@ -121,7 +121,7 @@ MooParser {
 					switch(key,
 						\room, {
 							thing = MooRoom(actor.moo, obj, actor, nil, true);
-							actor.postUser("Here (%) is object number %\nNew room % is object number %".format(actor.location.name, actor.location.id, thing.name, thing.id));
+							actor.postUser("Here (%) is object number %\nNew room % is object number %".format(actor.location.name, actor.location.id, thing.name, thing.id), actor);
 							//{ actor.move(thing); }.fork;
 						},
 						\stage, {
@@ -158,7 +158,7 @@ MooParser {
 				});
 
 				matched.if({
-					actor.postUser("Made %.".format(iobj));
+					actor.postUser("Made %.".format(iobj), actor);
 				});
 			});
 		});
@@ -181,12 +181,12 @@ MooParser {
 				thing.isNil.if({
 					// not a number. Make a new room and connect it
 					thing = MooRoom(actor.moo, iobj, actor);
-					actor.postUser("Here (%) is object number %".format(actor.location.name, actor.location.id));
-					actor.postUser("New room % is object number %".format(thing.name, thing.id));
+					actor.postUser("Here (%) is object number %".format(actor.location.name, actor.location.id), actor);
+					actor.postUser("New room % is object number %".format(thing.name, thing.id), actor);
 				});
 
 				actor.location.addExit(dobj, thing);
-				actor.postUser("New exit % to %".format(dobj, thing.name));
+				actor.postUser("New exit % to %".format(dobj, thing.name), actor);
 				matched = true;
 			});
 		});
