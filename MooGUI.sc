@@ -64,7 +64,7 @@ MooGUI {
 
 	init {|show, callback|
 
-		var panel, key = Moo.formatKey(me.id, \post);
+		var panel, font, key = Moo.formatKey(me.id, \post);
 
 		// Yes, this is happening!
 		exists = true;
@@ -83,10 +83,14 @@ MooGUI {
 			view.minHeight_(130);
 		});
 
+		// font
+		font = Font.monospace(24, bold: false, italic: false, usePointSize: false);
+
 		disp = TextView().editable = false;
 		disp.resize_(5);
 		disp.hasVerticalScroller = true;
 		disp.autohidesScrollers_(true);
+		disp.font = font;
 
 		codeText = TextView().editable = true;
 		codeText.resize_(5);
@@ -96,6 +100,7 @@ MooGUI {
 		codeText.string_("// Code Space\n\n(Moo.default.me ++ Moo.default.me.location).push;\n\n");
 		codeText.syntaxColorize;  // it would be nice if this worked
 		codeText.tabWidth_(15);
+		codeText.font = font;
 
 		panel = SplitHPanel(leftPanel:disp, rightPanel:codeText);
 
@@ -103,6 +108,7 @@ MooGUI {
 		.focus(true)
 		.autohidesScrollers_(true);
 		inputWidget.resize_(8).maxHeight_(30);
+		inputWidget.font = font;
 
 		openSpace = HLayout();
 
