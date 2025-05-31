@@ -1,7 +1,7 @@
 TITLE:: Moo
 summary:: A Moo in SuperCollider
 categories:: Libraries>BiLETools>SCMoo, Games>SCMoo
-related:: Classes/MooGUI, Classes/MooVerb, Classes/MooObject, Classes/MooInit, Classes/NetAPI, Reference/SomeRelatedStuff, etc.
+related:: Classes/MooGUI, Classes/MooVerb, Classes/MooObject, Classes/MooInit, Classes/NetAPI, Reference/MooLogin
 
 DESCRIPTION::
 A MOO is a Multi-User Dungeon, but Object Oriented

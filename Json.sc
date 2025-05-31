@@ -246,6 +246,8 @@ MooJSONConverter : JSONlib {
 
 		moo = moo ? Moo.default;
 
+		moo.rest.wait;
+
 		//"prConvertTree".debug(this);
 
 		(inTree.not && object.isKindOf(MooObject)).if({
@@ -409,6 +411,9 @@ MooJSONConverter : JSONlib {
 		var class, type, id, object;
 
 		//"restoreMoo %".format(obj).debug(this);
+		moo = moo ? Moo.default; // evil hack
+
+		moo.rest.wait;
 
 		obj.isKindOf(Dictionary).if({
 

@@ -1,34 +1,36 @@
 Moo {
 	classvar <>default;
-	var index, objects, users, <api, <semaphore, <pronouns, <host, <>lobby, <me, <generics, gui;
+	var index, objects, users, <api, <semaphore, <pronouns, <host, <>lobby, <me, <generics, gui, <>rest;
 
 
 	*formatKey{|id, key|
 		^"%/%".format(id, key).asSymbol;
 	}
 
-	*new{|netAPI, json, loadType, isHost=true|
+	*new{|netAPI, json, loadType, isHost=true, rest= 0.01, fontSize=24|
 		"new".debug(this);
-		^super.new.load(netAPI, json, loadType, isHost)
+		^super.new.load(netAPI, json, loadType, isHost, rest,fontSize)
 	}
 
-	*login{|netAPI, json, loadType, isHost=true|
+	*login{|netAPI, json, loadType, isHost=true, rest= 0.01, fontSize=24|
 		var moo;
 		"login".debug(this);
-		moo = super.new.load(netAPI, json, loadType, isHost);
+		moo = super.new.load(netAPI, json, loadType, isHost, rest);
 		//^super.new.init_remote(netAPI)
 		moo.toJSON.postln;
-		moo.gui({
-			"arriving".debug(this);
-			//newLocation.arrive(this, newLocation, this, newLocation);
+		AppClock.sched(0, {
+			moo.gui({
+				"arriving".debug(this);
+				//newLocation.arrive(this, newLocation, this, newLocation);
 				//moo.lobby.arrive(moo.me,moo.lobby, moo.me, moo.lobby);
-			moo.lobby.getVerb(\arrive).invoke(moo.me, moo.lobby, moo.me, moo.lobby);
-			//moo.me.login(moo.me, moo.lobbj, moo.me, moo.me);
-		});
+				moo.lobby.getVerb(\arrive).invoke(moo.me, moo.lobby, moo.me, moo.lobby);
+				//moo.me.login(moo.me, moo.lobbj, moo.me, moo.me);
+			});
+		}, nil);
 		^moo;
 	}
 
-	*bootstrap {|api, json, loadType, isHost=true|
+	*bootstrap {|api, json, loadType, isHost=true, rest= 0.01, fontSize=24|
 		var doc, moo, startGui;
 
 		"bootstrap".debug(this);
@@ -62,7 +64,7 @@ Moo {
 		^moo
 	}
 
-	*fromJSON{|json, api, loadType, isHost=true|
+	*fromJSON{|json, api, loadType, isHost=true, rest= 0.01, fontSize=24|
 		var arg1, arg2;
 		var moo, player;
 
@@ -114,9 +116,9 @@ Moo {
 	}
 
 
-	*load{|json, api, loadType = \parseFile, isHost=true|
+	*load{|json, api, loadType = \parseFile, isHost=true, rest= 0.01|
 		"load".debug(this);
-		^this.fromJSON(json, api, loadType, isHost);
+		^this.fromJSON(json, api, loadType, isHost, rest);
 	}
 
 
@@ -125,6 +127,7 @@ Moo {
 
 		"init".debug(this);
 
+		rest = rest ? 0.01;
 		api = net ? NetAPI.default;
 
 		api.isNil.if({
@@ -226,15 +229,17 @@ Moo {
 	}
 
 
-	load {|net, json, loadType, isHost=true|
+	load {|net, json, loadType, isHost=true, loadRest=0.01|
 
 		var root, user_update_action;
 
 		"load".debug(this);
+		rest = loadRest ? 0.01;
 
 		Moo.default = this;
 
 		this.init(net);
+
 
 		//api.dump;
 
@@ -543,17 +548,17 @@ Moo {
 		^found
 	}
 
-	gui {|callback|
+	gui {|callback, fontSize|
 
 		gui.notNil.if({
 			gui.exists.if({
 				//"we have a gui".debug(this);
-				^gui.callback(callback);
+				^gui.fontSize_(fontSize).callback(callback);
 			})
 		});
 
 		//"no gui".debug(this);
-		gui = MooGUI(this,callback);
+		gui = MooGUI(this,callback, fontSize:fontSize);
 		^gui;
 
 	}
@@ -629,6 +634,8 @@ Moo {
 
 		//"waited".debug(this);
 
+		rest.wait; // the system needs to breathe
+
 		obj.isKindOf(Dictionary).if({
 
 
@@ -641,7 +648,7 @@ Moo {
 
 			objs = obj.atIgnoreCase("Objects");
 			//objs.debug(this);
-			objs = converter.restoreMoo(objs, this);
+			objs = converter.restoreMoo(objs, this, rest);
 
 			// put everything back at the right index
 			//objects.do({|o|

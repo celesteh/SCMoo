@@ -1528,11 +1528,13 @@ MooContainer : MooObject {
 				});
 
 				//removed.notNil.if({
+				contents.includes(item).not.if({
 					contents = contents.add(item);
 					//playableEnv.put(item.name.asSymbol, item);
 					this.put(item.name.asSymbol, item);
 
 					item.location_(this, moo, caller);
+				});
 				//});
 
 				shouldBlock.if({

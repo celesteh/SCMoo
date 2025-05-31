@@ -36,7 +36,7 @@ MooParser {
 
 		dict.keys.do({|key|
 
-			item = converter.restoreMoo(dict.at(key));
+			item = converter.restoreMoo(dict.at(key), moo);
 			//"item %".format(item).debug(this);
 
 			this.reserveWord(key.asSymbol, item);

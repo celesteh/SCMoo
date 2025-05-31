@@ -3,7 +3,7 @@
 	summary:		"A Moo in SuperCollider",
 	author: 		"Charles Celeste Hutchins",
 
-	version:		0.001, // must be a float
+	version:		0.002, // must be a float
 	organization: 	"University of Kent",
 	country: 		"UK",
 	since: 		"2025",

@@ -1,6 +1,6 @@
 MooGUI {
 
-	var moo, me, <view, <string, disp, >notify, <exists, <color, inputWidget, codeText, openSpace;
+	var moo, me, <view, <string, disp, >notify, <exists, <color, inputWidget, codeText, openSpace, font;
 
 	*asDoc {|moo, callback|
 		^this.asDocument(moo, callback);
@@ -14,9 +14,9 @@ MooGUI {
 		^doc;
 	}
 
-	*new{|moo, callback, view, show=true|
+	*new{|moo, callback, view, show=true, fontSize|
 
-		^super.newCopyArgs(moo, moo.me, view).init(show, callback);
+		^super.newCopyArgs(moo, moo.me, view).init(show, callback, fontSize);
 	}
 
 	*setKeys{|widget, me|
@@ -61,10 +61,16 @@ MooGUI {
 		^widget
 	}
 
+	fontSize_ {|fontSize = 24|
+		font = Font.monospace(fontSize, bold: false, italic: false, usePointSize: true);
+		codeText.font_(font);
+		inputWidget.font = font;
+		disp.font = font;
+	}
 
-	init {|show, callback|
+	init {|show, callback, fontSize = 24|
 
-		var panel, font, key = Moo.formatKey(me.id, \post);
+		var panel, key = Moo.formatKey(me.id, \post);
 
 		// Yes, this is happening!
 		exists = true;
@@ -84,13 +90,13 @@ MooGUI {
 		});
 
 		// font
-		font = Font.monospace(24, bold: false, italic: false, usePointSize: false);
+		//font = Font.monospace(fontSize, bold: false, italic: false, usePointSize: false);
 
 		disp = TextView().editable = false;
 		disp.resize_(5);
 		disp.hasVerticalScroller = true;
 		disp.autohidesScrollers_(true);
-		disp.font = font;
+		//disp.font = font;
 
 		codeText = TextView().editable = true;
 		codeText.resize_(5);
@@ -100,7 +106,7 @@ MooGUI {
 		codeText.string_("// Code Space\n\n(Moo.default.me ++ Moo.default.me.location).push;\n\n");
 		codeText.syntaxColorize;  // it would be nice if this worked
 		codeText.tabWidth_(15);
-		codeText.font = font;
+		//codeText.font = font;
 
 		panel = SplitHPanel(leftPanel:disp, rightPanel:codeText);
 
@@ -108,7 +114,9 @@ MooGUI {
 		.focus(true)
 		.autohidesScrollers_(true);
 		inputWidget.resize_(8).maxHeight_(30);
-		inputWidget.font = font;
+		//inputWidget.font = font;
+
+		this.fontSize = fontSize ? 24;
 
 		openSpace = HLayout();
 

@@ -4,7 +4,13 @@ A MOO written in sclang
 Relies on BiLETools and JSONlib
 
 
+## Logging In
+
+If you want to log into the MOO used at ICLC 2025, please see the included Reference file MooLogin, which is linked form the Moo object helpfile.
+
 ## Loading and Saving
+
+You can also make your own MOO database.
 
 To use the MOO you need to be running NetAPI (all of the code in this section relies on the following line, which will start is local-only)
 
