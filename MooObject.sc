@@ -1648,6 +1648,7 @@ MooContainer : MooObject {
 			this.put(item.name.asSymbol, item);
 			item;
 		});
+		contents = contents.as(Set).as(Array); // dedup // thanks dkg
 		semaphore.signal;
 		//"restore signaled".denug(this.name);
 
