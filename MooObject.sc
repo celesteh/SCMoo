@@ -1629,6 +1629,7 @@ MooContainer : MooObject {
 		json_contents = dict.atIgnoreCase("contents");
 		//"contents %".format(contents).debug(this);
 		contents = contents ++ json_contents.collect({|item| this.class.refToObject(item, converter, moo) });
+		contents = contents.as(Set).as(Array); // dedup // thanks dkg
 	}
 
 
