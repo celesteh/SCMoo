@@ -1,7 +1,7 @@
 # SCMoo
 A MOO written in sclang
 
-Relies on BiLETools and JSONlib
+Relies on [BiLETools](https://github.com/celesteh/BiLETools) and [JSONlib](https://github.com/musikinformatik/JSONlib). [Vowel](https://github.com/supercollider-quarks/Vowel) reccomended but not required.
 
 
 ## Logging In
