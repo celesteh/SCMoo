@@ -301,5 +301,5 @@ w = MooWebSocketResponder(a,"password",g,"OptionalGroupPassword", "https://moo.b
 )
 w.getJSON({|json| json.debug("command line"); j = json; "JSON retrieved".postln});
 n = NetAPI.other(a, g, path:w);
-m = Moo.login(n, j, \parseText);
+{ m = Moo.login(n, j, \parseText); }.fork;
 ::
