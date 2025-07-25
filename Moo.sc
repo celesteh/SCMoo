@@ -1,7 +1,11 @@
 Moo {
-	classvar <>default;
+	classvar <>default, <>localisation;
 	var index, objects, users, <api, <semaphore, <pronouns, <host, <>lobby, <me, <generics, gui, <>rest;
 
+	*parser {
+		this.localisation.parser.debug(this);
+		^this.localisation.parser
+	}
 
 	*formatKey{|id, key|
 		^"%/%".format(id, key).asSymbol;
@@ -9,12 +13,17 @@ Moo {
 
 	*new{|netAPI, json, loadType, isHost=true, rest= 0.01, fontSize=24|
 		"new".debug(this);
+		localisation = localisation ? MooEn();
 		^super.new.load(netAPI, json, loadType, isHost, rest,fontSize)
 	}
 
 	*login{|netAPI, json, loadType, isHost=true, rest= 0.01, fontSize=24|
 		var moo;
+		//this.localisation = MooEn();
+		localisation = localisation ? MooEn();
 		"login".debug(this);
+
+
 		moo = super.new.load(netAPI, json, loadType, isHost, rest);
 		//^super.new.init_remote(netAPI)
 		moo.toJSON.postln;
@@ -32,6 +41,9 @@ Moo {
 
 	*bootstrap {|api, json, loadType, isHost=true, rest= 0.01, fontSize=24|
 		var doc, moo, startGui;
+
+		//this.localisation = MooEn();
+		localisation = localisation ? MooEn();
 
 		"bootstrap".debug(this);
 
@@ -67,6 +79,9 @@ Moo {
 	*fromJSON{|json, api, loadType, isHost=true, rest= 0.01, fontSize=24|
 		var arg1, arg2;
 		var moo, player;
+
+		//this.localisation = MooEn();
+		localisation = localisation ? MooEn();
 
 		"fromJSON".debug(this);
 
@@ -118,6 +133,8 @@ Moo {
 
 	*load{|json, api, loadType = \parseFile, isHost=true, rest= 0.01|
 		"load".debug(this);
+		//this.localisation = MooEn();
+		localisation = localisation ? MooEn();
 		^this.fromJSON(json, api, loadType, isHost, rest);
 	}
 
@@ -263,7 +280,7 @@ Moo {
 		((objects.size == 0) || (json.isNil)).if({
 
 			//"json is nil".debug(this);
-			MooInit.initAll(this);
+			MooInit.initAll(this, this.class.localisation);
 			me = root;
 
 		});
@@ -349,6 +366,8 @@ Moo {
 		}, {
 			// not yet written, but probably an auotmatic effect of NetAPI
 		});
+
+
 
 		^me;
 	}

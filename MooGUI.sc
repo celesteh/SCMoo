@@ -53,7 +53,8 @@ MooGUI {
 				 // alt + left or up or right or down arrow keys
 					//"eval".debug(this);
 					string = doc.selectedString;
-					MooParser(me, string);
+					//MooParser(me, string);
+				{ Moo.parser(me, string); }.fork;
 
 			});
 		});
@@ -167,7 +168,10 @@ MooGUI {
 				string = string.stripWhiteSpace;
 				inputWidget.string = "";
 
-				{ MooParser(me, string); }.fork;
+				string.debug(this);
+
+				//{ MooParser(me, string); }.fork;
+				{ Moo.parser.new(me, string); }.fork;
 
 			});
 

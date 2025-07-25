@@ -1,146 +1,125 @@
-MooInit {
+MooI18n {
 
-	// This class is for starting a new moo database from scratch
+	classvar <>i18n, <>parser;
 
+	*initClass{
 
-	*createMap {|dict, moo|
+		i18n = IdentityDictionary();
+	}
 
-		var rooms, place, destination;
+	*new{|parser|
+		^super.new.init(parser);
+	}
 
-		// This dictionary looks like
-		//\london, [\north, \newcastle, \east, \essex, \west, \wales, \south, \surrey]
+	init {|parser|
+		this.class.parser = parser;
+	}
 
-		rooms = IdentityDictionary();
+	*addPair{|key, value|
 
-		// first make all the rooms
-		dict.keys.do({|key|
+		value.isKindOf(Function).not.if({
 
-			key = key.asSymbol;
-			((key != \lobby) && (key != \Lobby)).if({
-				rooms.put(key, MooRoom(moo, key.asString, moo.me, moo.generics[\room]));
-			} , {
-				rooms.put(key, moo.lobby);
-			});
+			i18n[key] = value;
+			// if we're looking up symbols, make it bidirectional
+			value.isKindOf(Symbol).if({
+				i18n[value] = key;
+			})
 		});
+	}
 
-		// then make all the exits and any leaf nodes not mentioned earlier
-		dict = dict.collect({|item, key|
-			place = rooms.at(key.asSymbol);
+	addPair{|key, value|
+			this.class.addPair(key, value);
+	}
 
-			item.pairsDo({|exit, where|
+	at{|key|
+		^this.class.i18n.at(key);
+	}
 
-				[exit, where].debug(key);
+	parser {
+		^this.class.parser;
+	}
 
-				exit = exit.asSymbol;
-				where = where.asSymbol;
-
-				//location.addExit(dobj, thing);
-				destination = rooms.at(where);
-				destination.isNil.if({
-					destination = MooRoom(moo, where.asString, moo.me, moo.generics[\room]);
-					rooms.put(where, destination);
-				});
-				place.addExit(exit, destination);
-			});
-		});
-
-		^rooms
+	addFormattedMsg {|key, str, orderMapping|
+		this.addPair(key, [str, orderMapping]);
 	}
 
 
-	*initAll {|moo, i18n|
+	// we don't want to store functions, so we will store the order of array items and the string with %s
+	*format {|key, args|
+		// for an example, \newRoomMsg has
+		// [locationName, locationID, newName, newID]
+		// "Here (%) is object number %\nNew room % is object number %"
+		// So in english, the key is \newRoomMsg and args is the array above
+		// the key returns an array which is [the string, [0,1,2,3]]
+		var str, arr;
 
+		arr = this.at(key.asSymbol);
+		str = arr[0];
+		arr = arr.collect({|i| args.at(i) });
 
-		var root;
-
-		i18n  = i18n ? Moo.localisation;
-
-		// Make root
-		//ok, the roo ID is always \0
-
-		root = MooRoot(moo, "Root");
-		//"made root".debug(this);
-
-		moo.generics[\object] = MooObject(moo, i18n.at(\object).asString, root, -1); //object
-		//moo.generics[\object] = MooObject(moo, "object", root, -1);
-		moo.generics[\object].description_(i18n.at(\defaultDesc).asString); //"You see nothing special."
-		this.updateGenericObject(moo);
-
-		moo.generics[\container] = MooContainer(moo, i18n.at(\bag).asString, root, moo.generics[\object]); //bag
-		this.updateGenericContainer(moo);
-
-		//"make a generic player".debug(this);
-		moo.generics[\player] = MooPlayer(moo, i18n.at(\player).asString, nil, false, moo.generics[\container]); // player
-		//"made generic player, %".format(generics[\player].name).debug(this);
-		this.updateGenericPlayer(moo);
-
-		// now set this as the parent of root
-		root.parent = moo.generics[\player];
-
-
-		moo.generics[\room] = MooRoom(moo, i18n.at(\room).asString, root, moo.generics[\container]); // room
-		moo.generics[\room].description_(i18n.at(\defaultRoomDesc).asString); //"An unremarkable place."
-
-		//MooParser.reserveWord(\room, genericRoom);
-		//generics[MooRoom] = generics[\room];
-
-		moo.lobby = MooRoom(moo, i18n.at(\Lobby).asString, root, moo.generics[\room]); //Lobby
-		this.updateGenericRoom(moo);
-		//me = root;
-
-
-
-		//objects = [MooRoom(this, "Lobby", objects[0])];
-		//index = 2;
-
-		MooParser.reserveWord(\l, \look);
-		MooParser.reserveWord(\inv, \inventory);
-
-		// look with no args
-		MooParser.reserveWord(\look, [\look, \here]);
-		// inv with no args
-		MooParser.reserveWord(\inventory, [\inventory, \me]);
-
+		^str.format(*arr);
 	}
 
+	format {|key ...args|
+		^this.class.format(key, args);
+	}
 
-	*updateAll{|moo, i18n|
+}
 
-		i18n.isNil.if({
-			this.updateGenericObject(moo);
-			this.updateGenericContainer(moo);
-			this.updateGenericPlayer(moo); // also gets container and object
-			this.updateGenericRoom(moo); // twice over, but nbd
-		} , {
-			i18n.respondsTo(\updateGenericObject).if({
-				i18n.updateGenericObject(moo);
-			}, {
-				this.updateGenericObject(moo);
-			});
 
-			i18n.respondsTo(\updateGenericContainer).if({
-				i18n.updateGenericContainer(moo);
-			}, {
-				this.updateGenericContainer(moo);
-			});
 
-			i18n.respondsTo(\updateGenericPlayer).if({
-				i18n.updateGenericPlayer(moo);
-			}, {
-				this.updateGenericPlayer(moo);
-			});
+MooEn : MooI18n {
 
-			i18n.respondsTo(\updateGenericRoom).if({
-				i18n.updateGenericRoom(moo);
-			}, {
-				this.updateGenericRoom(moo);
-			});
-		});
+	*new {
+
+		^super.new.init();
+	}
+
+	init {
+
+		super.init(MooEnParser);
+
+		this.addPair(\make, \make);
+		this.addPair(\copy, \copy);
+		this.addPair(\room, \room);
+		this.addPair(\stage, \stage);
+		this.addPair(\clock, \clock);
+		this.addPair(\object, \object);
+		this.addPair(\container, \container);
+		this.addPair(\bag, \bag);
+		this.addPair(\player, \player);
+		this.addPair(\Lobby, \Lobby);
+		this.addPair(\exit, \exit);
+		this.addPair(\say, \say);
+		this.addPair(\pose, \pose);
+		this.addPair(\here, \here);
+		this.addPair(\me, \me);
+
+		this.addPair(\openString, $");
+		this.addPair(\closeString,$");
+
+		//this.addPair(\newRoomMsg, {|locationName, locationID, newName, newID|
+		//	"Here (%) is object number %\nNew room % is object number %".format(locationName, locationID, newName, newID)
+		//});
+		this.addFormattedMsg(\newRoomMsg, "Here (%) is object number %\nNew room % is object number %",
+			/* [locationName, locationID, newName, newID], */ [0,1,2,3]);
+
+
+		//this.addPair(\newObjMsg, {|obj| "Made %.".format(obj) });
+		this.addFormattedMsg(\newObjMsg, "Made %.", [0]);
+		//this.addPair(\exitMsg, {|exitName, roomName| "New exit % to %".format(exitName, roomName) });
+		this.addFormattedMsg(\exitMsg,  "New exit % to %", [0, 1]);
+		//this.addPair(\inputErrorMsg, {|badString| "Input not understood." });
+		this.addFormattedMsg(\inputErrorMsg, "Input not understood.", []);
+
+
+		this.addPair(\defaultDesc, "You see nothing special.");
+		this.addPair(\defaultRoomDesc, "An unremarkable place.");
 
 	}
 
 
-	*updateGenericObject{|moo|
+	updateGenericObject{|moo|
 
 			moo.generics[\object].verb_(\get, \this, \none,
 				{|dobj, iobj, caller, object|
@@ -264,7 +243,7 @@ MooInit {
 
 	}
 
-	*updateGenericContainer{|moo|
+	updateGenericContainer{|moo|
 
 		//this.updateGenericObject(moo);
 
@@ -370,7 +349,7 @@ MooInit {
 
 	}
 
-	*updateGenericRoom{|moo|
+	updateGenericRoom{|moo|
 
 		//this.updateGenericContainer(moo);
 
@@ -513,7 +492,7 @@ MooInit {
 
 	}
 
-	*updateGenericPlayer{|moo|
+	updateGenericPlayer{|moo|
 
 
 
@@ -651,4 +630,113 @@ MooInit {
 		);
 
 	}
+
+
+
+
+}
+
+MooEnParser : MooParser {
+
+	* initClass{
+
+		//i18n[\make] = \make;
+	}
+
+	parse {|tokens|
+
+
+		tokens.debug(this);
+
+			//"flattened".postln;
+
+			//tokens.postln;
+			//tokens.debug(this);
+
+			verb = tokens[0];
+			(tokens.size > 1).if({ dobj = tokens[1]; });
+
+			(tokens.size > 2).if ({ iobj = tokens.last; });
+
+		//tokens.postln;
+		//[verb, dobj, iobj].debug(this);
+
+	}
+
+
+}
+
+
+
+
+MooEoParser : MooParser {
+
+
+	parse {|tokens|
+
+		var  unquoted, found;
+
+
+		tokens.do({|token|
+
+			found = false;
+
+			token.endsWith("u").if({
+				verb = token;
+				found = true;
+			});
+
+			// the following only works if the verb is not "estu"
+
+			(token.endsWith("on") ||
+				token.endsWith("ojn")).if({
+				dobj = token[0..(token.size-2)]; // chop off the n
+				found = true;
+			});
+
+			(token.endsWith("o") ||
+				token.endsWith("oj")).if({
+				iobj = token;
+				found = true;
+			});
+
+			// look out for #1234 style objects
+			token.beginsWith("\#").if({
+
+				token.endsWith("n").if({
+					dobj = token[0..(token.size-2)]; // chop off the n
+				}, {
+					iobj = token;
+				});
+				found = true;
+			});
+
+			this.isString(token).if({
+				unquoted = this.stripQuotes(token);
+				unquoted.split($ ).do({|word|
+					word.endsWith("n").if({
+						dobj.isNil.if({
+							dobj = token; // don't blow away the dobj we already found
+						} , {
+							iobj = token;
+						});
+						found = true;
+					});
+				});
+
+				// verbs can't be quoted strings, so it must be an indirect object
+				found.not.if({
+					iobj = token;
+				});
+			});
+
+		});
+
+		// if we have found an iobj, but not a dobj, this is an error
+		(dobj.isNil && iobj.notNil).if({
+			dobj = iobj;
+			iobj= nil;
+		});
+	}
+
 }

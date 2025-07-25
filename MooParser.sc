@@ -1,13 +1,32 @@
 
+
 MooParser {
 
-	classvar <reservedWords;
-	var actor, input, verb, dobj, preposition, iobj;
+	classvar <reservedWords, >i18n;
+	var actor, input, verb, dobj, preposition, iobj, dobj_object, iobj_object, li18n;
 
 
 	* initClass{
 
 		reservedWords = IdentityDictionary();
+		//i18n = MooI18n();//IdentityDictionary();
+	}
+
+	*i18n {
+		i18n.isNil.if({
+			i18n = Moo.localisation;
+		});
+		^i18n;
+	}
+
+	*addI18Pair{|key, val|
+
+		//i18n[key] = val;
+		// if we're looking up symbols, make it bidirectional
+		//val.isKindOf(Symbol).if({
+		//	i18n[val] = key;
+		//})
+		this.i18n.addPair(key, val);
 	}
 
 	*reserveWord{|key, object| // optionally tie the word to a thing
@@ -64,11 +83,13 @@ MooParser {
 	init{| speaker, string|
 
 		var tokenised;
+		li18n = this.class.i18n;
 
 		actor = speaker;
 		input = string;
 
-		this.parse();
+		//this.parse();
+		this.readyParse();
 
 		//"parsed".postln;
 
@@ -110,7 +131,7 @@ MooParser {
 
 		//"creation".debug(this);
 
-		(verb.asString.toLower.asSymbol == \make).if({
+		(verb.asString.toLower.asSymbol == li18n[\make]).if({
 
 			dobj.notNil.if({
 
@@ -121,26 +142,28 @@ MooParser {
 					matched = true;
 
 					switch(key,
-						\room, {
+						li18n[\room], {
 							thing = MooRoom(actor.moo, obj, actor, nil, true);
-							actor.postUser("Here (%) is object number %\nNew room % is object number %".format(actor.location.name, actor.location.id, thing.name, thing.id), actor);
+							//actor.postUser("Here (%) is object number %\nNew room % is object number %".format(actor.location.name, actor.location.id, thing.name, thing.id), actor);
 							//{ actor.move(thing); }.fork;
+							//actor.postUser(li18n[\newRoomMsg].value(actor.location.name, actor.location.id, thing.name, thing.id), actor);
+							actor.postUser(li18n.format(\newRoomMsg, actor.location.name, actor.location.id, thing.name, thing.id), actor);
 						},
-						\stage, {
+						li18n[\stage], {
 							thing = MooStage(actor.moo, obj, actor, nil, true);
 							thing.location = actor.location;
 							{ actor.location.addObject(thing); }.fork;
 						},
-						\clock, {
+						li18n[\clock], {
 							thing = MooClock(actor.moo, obj, actor, nil, true);
 							//thing.location = actor.location;
 							{ actor.addObject(thing); }.fork;
 						},
-						\object, {
+						li18n[\object], {
 							thing = MooObject(actor.moo, obj, actor, nil, true);
 							{ actor.addObject(thing); }.fork;
 						},
-						\container, {
+						li18n[\container], {
 							thing = MooContainer(actor.moo, obj, actor, nil, true);
 							{ actor.addObject(thing); }.fork;
 						},
@@ -160,13 +183,15 @@ MooParser {
 				});
 
 				matched.if({
-					actor.postUser("Made %.".format(iobj), actor);
+					//actor.postUser("Made %.".format(iobj), actor);
+					//actor.postUser(li18n[\newObjMsg].value(iobj), actor);
+					actor.postUser(li18n.format(\newObjMsg, iobj), actor);
 				});
 			});
 		});
 
 
-		(verb.asString.toLower.asSymbol == \exit).if({
+		(verb.asString.toLower.asSymbol == li18n[\exit]).if({
 			(actor.location.owner == actor).if({
 				// exit north to 135
 				(iobj.isDecimal).if({
@@ -277,12 +302,12 @@ MooParser {
 
 				/*
 				d_obj.isNil.if({
-					d_obj = actor.location;
+				d_obj = actor.location;
 
 				},{
-					i_obj.isNil.if({
-						i_obj = actor.location
-					});
+				i_obj.isNil.if({
+				i_obj = actor.location
+				});
 				});
 				*/
 
@@ -298,11 +323,11 @@ MooParser {
 
 				/*
 				d_obj.isNil.if({
-					d_obj = actor
+				d_obj = actor
 				},{
-					i_obj.isNil.if({
-						i_obj = actor
-					});
+				i_obj.isNil.if({
+				i_obj = actor
+				});
 				});
 				*/
 
@@ -387,8 +412,19 @@ MooParser {
 
 		//"isString".debug(this);
 
-		^(token.beginsWith("\"") && token.endsWith("\""));
+		^(token.beginsWith(""++i18n[\openString]) && token.endsWith(""++i18n[\closeString]));
 
+	}
+
+	stripQuotes{|token|
+		token.endsWith(""++i18n[\closeString]).if({
+			token = token[0..(token.size-2)];
+		});
+		token.beginsWith(""++i18n[\openString]).if({
+			token = token[1..];
+		});
+
+		^token
 	}
 
 	pr_arrFlat{|arr, count|
@@ -433,9 +469,7 @@ MooParser {
 		^found;
 	}
 
-
-	parse {
-
+	readyParse {
 		var deStringed, tokens;
 
 		this.specialCase.not.if({
@@ -459,21 +493,10 @@ MooParser {
 
 			tokens = this.pr_arrFlat(tokens, 0);
 
-			//"flattened".postln;
-
-			//tokens.postln;
-			//tokens.debug(this);
-
-			verb = tokens[0];
-			(tokens.size > 1).if({ dobj = tokens[1]; });
-
-			(tokens.size > 2).if ({ iobj = tokens.last; });
+			this.parse(tokens);
 		});
-
-		//tokens.postln;
-		//[verb, dobj, iobj].debug(this);
-
 	}
+
 
 
 
@@ -523,6 +546,10 @@ MooParser {
 
 		(key.isKindOf(String) || key.isKindOf(Symbol)).if({
 			str = key.asString;
+			str.beginsWith("\#").if({
+				str = str[1..];
+			});
+
 			str.isDecimal.if({
 				//"key %".format(key).debug(this);
 				num = str.select({|c| c.isDecDigit }).asInteger;
@@ -626,29 +653,35 @@ MooVerb{
 			"updateCVSSource", "downloadSVNSource", "getSubDirectories", "findSubDirectories",
 			"openHTMLFile", "openServer", "revealInFinder", "perform", "performList",
 			"performMsg", "performWithEnvir", "performKeyValuePairs", "tryPerform",
-			"superPerform", "superPerformList", "multiChannelPerform"
+			"superPerform", "superPerformList", "multiChannelPerform", "Pipe", "UnixFILE"
 		];
 
 		reserved = ["public"];
 	}
 
 	*validID {|key|
-		var naughty_count = 0, valid = true;
+		var naughty_count = 0, valid = true, chopped;
 
 		key.isKindOf(Symbol).if({ key = key.asString });
 
 		key.isKindOf(String).if({
 			valid = MooVerb.pass(key);
 
+			key.beginsWith("@").if ({ // this is allowed
+				chopped = key[1..]
+			} , {
+				chopped = key
+			});
+
 			// weird chars
-			naughty_count = key.sum({|char| (char.isAlphaNum).if({ 0 } , { 1 }) });
+			naughty_count = chopped.sum({|char| (char.isAlphaNum).if({ 0 } , { 1 }) });
 			(naughty_count > 0).if({ valid = false });
 
 			// starts with a number
-			key[0].isAlpha.not.if({ valid = false; });
+			chopped[0].isAlpha.not.if({ valid = false; });
 
 			reserved.do({|naughty|
-				(key.compare(naughty, true) == 0).if({
+				(chopped.compare(naughty, true) == 0).if({
 					valid = false;
 				});
 			});
@@ -831,7 +864,7 @@ MooVerb{
 
 + String {
 
-  isDecimal {
+	isDecimal {
 
 		var str, num = true;
 

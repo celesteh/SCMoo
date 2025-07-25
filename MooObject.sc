@@ -102,7 +102,7 @@ MooObject : NetworkGui  {
 	restore{|dict, converter, imoo |
 
 		var json_id, parent, json_owner, owner_id, superID, props, public, key, value, jverbs, verb,
-		getObj, mutable, location;
+		getObj, mutable, location, process;
 
 		//"restore %".format(dict).debug(this);
 
@@ -145,6 +145,50 @@ MooObject : NetworkGui  {
 			obj;
 		};
 
+
+		process = {|item|
+
+			var obj, result;
+
+			// is it a Moo object
+			obj = getObj.(item);//MooObject.mooObject(value, moo);
+			obj.isKindOf(MooObject).if({
+				result = obj.id;
+			});
+
+			result.isNil.if({
+
+				// is it a number?
+				item.isKindOf(String).if({
+					item = item.stripEnclosingQuotes;
+
+					item.isDecimal.if({
+						item.contains($.).if({
+							result = item.asFloat;
+						} , {
+							result = item.asInteger;
+						});
+					});
+				}, {
+					// already know this is not a string
+					item.isKindOf(ArrayedCollection).if({
+
+						result = item.collect({|i|
+							process.(i);
+						});
+					} , {
+						// this might be dodgy, idk
+						item.isKindOf(Dictionary).if({
+							result = item.keysValuesChange({|key, val| process.(val); });
+						});
+					});
+				});
+			});
+
+			result ? item;
+		};
+
+
 		moo.notNil.if({
 
 			super.make_init(moo.api, nil, {});
@@ -179,6 +223,9 @@ MooObject : NetworkGui  {
 			//  "properties" : [ { "parent" : 8521, "public" : false },  etc ]
 			props = dict.atIgnoreCase("properties");
 			props.do({|prop|
+
+
+
 				// each property is a dictionary, with two keys
 
 				// first find out if it's public
@@ -198,6 +245,7 @@ MooObject : NetworkGui  {
 
 						value = prop.atIgnoreCase(key);
 
+						/*
 						//"restore: key % value %".format(key, value).debug(this.id);
 
 						// does the vlaue refer to a MooObject?
@@ -208,6 +256,7 @@ MooObject : NetworkGui  {
 
 						// check for numbers hiding in strings
 						value.isKindOf(String).if({
+							value = value.stripEnclosingQuotes;
 							value.isDecimal.if({
 								value.contains($.).if({
 									value = value.asFloat;
@@ -216,6 +265,8 @@ MooObject : NetworkGui  {
 								});
 							});
 						});
+						*/
+						value = process.(value);
 
 						// the changer is the JSON thingee
 						this.property_(key.asSymbol, value, public, converter, mutable, silent:true);
@@ -238,7 +289,8 @@ MooObject : NetworkGui  {
 			jverbs.do({|json_verb|
 				verb = MooVerb.fromJSON(json_verb, converter, moo, this);
 				key = verb.verb;
-				this.prValidID(key).not.if({
+				//this.prValidID(key).not.if({
+				MooVerb.validID(key).not.if({
 					MooError("Verbs must start with a letter and not cotnain special characters").throw;
 				});
 				verbs.put(key, verb);
@@ -901,7 +953,8 @@ MooObject : NetworkGui  {
 
 		//key.isKindOf(SimpleNumber).if({
 		//	MooError("Verb can't be a number").throw;
-		this.prValidID(key).not.if({
+		//this.prValidID(key).not.if({
+		MooVerb.validID(key).not.if({
 			MooError("Verbs must start with a letter and not cotnain special characters").throw;
 		});
 
