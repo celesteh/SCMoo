@@ -94,7 +94,7 @@ If you want to use the object later in sclang, it's easiest if the name is lower
 
 You can describe your object
 
-	describe objectName as "A very nice object. The best object."
+	@describe objectName as "A very nice object. The best object."
 
 Then, you can look at it
 
@@ -108,7 +108,7 @@ You can drop it
 So for an example, we might:
 
 	make cat
-	describe cat as "A thoroughly fluffy beast. You've never seen so much hair. Thank goodness its a hypoallergenic breed!"
+	@describe cat as "A thoroughly fluffy beast. You've never seen so much hair. Thank goodness its a hypoallergenic breed!"
 	drop cat
 
 
